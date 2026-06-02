@@ -1,0 +1,122 @@
+# Full self-hosted vid2scene stack: web + GPU worker + redis + postgres + azurite.
+#
+#   docker compose -f docker-compose.selfhost.yaml up --build
+#
+# Requires an NVIDIA GPU + nvidia-container-toolkit (for the worker). Uses host
+# networking so the browser, web, and worker all reach blob storage at the same
+# 127.0.0.1 address (see docs). Override any default via a sibling .env file.
+name: vid2scene
+
+services:
+  postgres:
+    image: postgres:16
+    network_mode: host
+    command: ["postgres", "-c", "listen_addresses=127.0.0.1"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vid2scene}
+      POSTGRES_USER: ${POSTGRES_USER:-vid2scene}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vid2scene}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-vid2scene}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7
+    network_mode: host
+    command: ["redis-server", "--bind", "127.0.0.1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "127.0.0.1", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    network_mode: host
+    # `ports:` is redundant under host networking on native Linux Docker
+    ports:
+      - "10000:10000"
+    command: ["azurite-blob", "--blobHost", "127.0.0.1", "--blobPort", "10000", "--skipApiVersionCheck", "--location", "/data"]
+    volumes:
+      - azurite-data:/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Web_Dockerfile
+    network_mode: host
+    # `ports:` is redundant under host networking on native Linux Docker
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: development
+      VITE_DEV_MODE: "false"
+      SECRET_KEY: ${SECRET_KEY:-dev-insecure-change-me-before-exposing}
+      BILLING_ENABLED: ${BILLING_ENABLED:-false}
+      REDIS_HOST: "127.0.0.1"
+      AZURITE_HOST: "127.0.0.1"
+      POSTGRES_HOST: "127.0.0.1"
+      POSTGRES_DB: ${POSTGRES_DB:-vid2scene}
+      POSTGRES_USER: ${POSTGRES_USER:-vid2scene}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vid2scene}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: Worker_Dockerfile
+    network_mode: host
+    runtime: nvidia
+    shm_size: 2gb
+    environment:
+      ENVIRONMENT: development
+      SECRET_KEY: ${SECRET_KEY:-dev-insecure-change-me-before-exposing}
+      BILLING_ENABLED: ${BILLING_ENABLED:-false}
+      REDIS_HOST: "127.0.0.1"
+      AZURITE_HOST: "127.0.0.1"
+      POSTGRES_HOST: "127.0.0.1"
+      POSTGRES_DB: ${POSTGRES_DB:-vid2scene}
+      POSTGRES_USER: ${POSTGRES_USER:-vid2scene}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vid2scene}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /hf-cache
+      RQ_QUEUES: ${RQ_QUEUES:-internal enterprise high default}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes:
+      - hf-cache:/hf-cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+      web:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redis-data:
+  azurite-data:
+  hf-cache:

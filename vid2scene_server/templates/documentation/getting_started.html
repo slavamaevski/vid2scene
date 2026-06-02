@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}vid2scene - Getting Started{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'documentation/css/docs.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="docs" class="container my-4">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 docs-sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">API Documentation</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'api_docs' %}" class="list-group-item list-group-item-action">
+                        Overview
+                    </a>
+                    <a href="{% url 'getting_started' %}" class="list-group-item list-group-item-action active">
+                        Getting Started
+                    </a>
+                    <a href="{% url 'authentication_docs' %}" class="list-group-item list-group-item-action">
+                        Authentication
+                    </a>
+                    <a href="{% url 'endpoints_docs' %}" class="list-group-item list-group-item-action">
+                        API Endpoints
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <h1>Getting Started</h1>
+            <p class="lead">Quick guide to get up and running with the vid2scene API.</p>
+
+
+            <div class="alert alert-info">
+                <h5 class="alert-heading">🎯 What You'll Learn</h5>
+                <ul class="mb-0">
+                    <li>How to get and use API keys</li>
+                    <li>How to upload and process videos</li>
+                    <li>How to monitor job progress</li>
+                    <li>How to download results</li>
+                </ul>
+            </div>
+
+            <h2>Step 1: Get Your API Key</h2>
+            <p>First, you'll need an API key to authenticate your requests.</p>
+
+            <ol>
+                <li>
+                    {% if user.is_authenticated %}
+                        Go to your <a href="{% url 'profile' %}" target="_blank">profile page</a>
+                    {% else %}
+                        <a href="{% url 'account_login' %}">Log in</a> and go to your profile page
+                    {% endif %}
+                </li>
+                <li>Scroll to the "API Keys" section</li>
+                <li>Enter a name like "My First API Key"</li>
+                <li>Click "Generate API Key"</li>
+                <li>Copy the key (you'll only see it once!)</li>
+            </ol>
+
+            <div class="alert alert-warning">
+                <strong>Important:</strong> Store your API key securely. Never commit it to version control or share it publicly.
+            </div>
+
+            <h2>Step 2: Upload a Video</h2>
+            <p>The vid2scene API uses a two-step upload process for security and reliability:</p>
+
+            <h3>2.1 Generate Upload URL</h3>
+            <p>First, get a secure upload URL for your video. Send only the file extension:</p>
+
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>curl -X POST \
+  -H "Authorization: Api-Key YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"file_extension": "mp4"}' \
+  {{ site_url }}/api/v1/generate-upload-url/</code></pre>
+            </div>
+
+            <p>This returns:</p>
+            <div class="bg-light p-3 rounded">
+                <pre><code>{
+  "url": "https://storage.blob.core.windows.net/container/videos/uuid.mp4?sv=...",
+  "blob_name": "videos/uuid.mp4"
+}</code></pre>
+            </div>
+
+            <h3>2.2 Upload Your Video</h3>
+            <p>Use the upload URL to upload your video file:</p>
+
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>curl -X PUT \
+  -H "x-ms-blob-type: BlockBlob" \
+  --data-binary @my_video.mp4 \
+  "SAS_URL_FROM_PREVIOUS_STEP"</code></pre>
+            </div>
+
+            <h2>Step 3: Create Processing Job</h2>
+            <p>After uploading, create and start a processing job:</p>
+
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>curl -X POST \
+  -H "Authorization: Api-Key YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "blob_name": "videos/uuid.mp4",
+    "title": "My Awesome Video",
+    "public": false,
+    "reconstruction_method": "glomap",
+    "remove_background": false,
+    "camera_type": "orbital"
+  }' \
+  {{ site_url }}/api/v1/submit-job/</code></pre>
+            </div>
+
+            <p>This returns the job details:</p>
+            <div class="bg-light p-3 rounded">
+                <pre><code>{
+  "success": true,
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "My Awesome Video",
+  "status": "Queued",
+  "uploaded_at": "2024-01-15T10:30:00Z",
+  "public": false,
+  "reconstruction_method": "glomap",
+  "training_max_num_gaussians": 300000,
+  "training_num_steps": 10000,
+  "remove_background": false,
+  "camera_data": null
+}</code></pre>
+            </div>
+
+            <h2>Step 4: Monitor Progress</h2>
+            <p>Check the status of your job:</p>
+
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>curl -H "Authorization: Api-Key YOUR_API_KEY" \
+  {{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/</code></pre>
+            </div>
+
+            <p>This returns the full job details including status:</p>
+            <div class="bg-light p-3 rounded">
+                <pre><code>{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "My Awesome Video",
+  "status": "Queued - position: 3",
+  "percent_complete": null,
+  "uploaded_at": "2024-01-15T10:30:00Z",
+  "public": false,
+  "reconstruction_method": "glomap",
+  "training_max_num_gaussians": 300000,
+  "training_num_steps": 10000,
+  "remove_background": false,
+  "has_ply": false,
+  "has_spz": false,
+  "camera_data": {
+    "position": {"x": 0.0, "y": 0.0, "z": 5.0},
+    "lookAt": {"x": 0.0, "y": 0.0, "z": 0.0},
+    "up": {"x": 0.0, "y": 1.0, "z": 0.0},
+    "cameraType": "orbital"
+  }
+}</code></pre>
+            </div>
+
+            <p>Job status can be:</p>
+            <ul>
+                <li><code>Queued</code> - Waiting to start processing</li>
+                <li><code>Queued - position: X</code> - Waiting in queue at position X</li>
+                <li><code>Processing video</code> - Currently processing the video</li>
+                <li><code>Generating 3D scene</code> - Creating the 3D reconstruction</li>
+                <li><code>Finished</code> - Completed successfully</li>
+                <li><code>Failed</code> - Processing failed</li>
+                <li><code>Not found</code> - Job not found in queue</li>
+            </ul>
+
+            <p>The <code>percent_complete</code> field shows progress during 3D scene generation (0-100), or <code>null</code> if not yet started.</p>
+
+            <h2>Step 5: Get Results</h2>
+            <p>Once processing is complete, you can:</p>
+
+            <h3>5.1 Download Files</h3>
+            <p>Download specific file types (PLY or SPZ) - these endpoints return 302 redirects:</p>
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code># Download PLY file (follow redirect)
+curl -H "Authorization: Api-Key YOUR_API_KEY" \
+  -L "{{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/download/ply/" \
+  -o scene.ply
+
+# Download SPZ file (follow redirect)
+curl -H "Authorization: Api-Key YOUR_API_KEY" \
+  -L "{{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/download/spz/" \
+  -o scene.spz</code></pre>
+            </div>
+
+            <h3>5.2 Get Preview Image</h3>
+            <p>Fetch a short-lived preview image URL (returns a 302 redirect to the image):</p>
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>curl -I -H "Authorization: Api-Key YOUR_API_KEY" \
+  {{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/preview/</code></pre>
+            </div>
+
+            <h2>Complete Python Example</h2>
+            <p>Here's a complete example in Python:</p>
+
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>import requests
+import time
+import os
+import json
+
+# Your API key
+API_KEY = "your-api-key-here"
+BASE_URL = "{{ site_url }}/api/v1"
+headers = {"Authorization": f"Api-Key {API_KEY}"}
+
+def print_response(step, response, show_json=True):
+    """Print formatted response information"""
+    print(f"\n{'='*50}")
+    print(f"STEP {step}")
+    print(f"{'='*50}")
+    print(f"Status Code: {response.status_code}")
+    print(f"URL: {response.url}")
+    print(f"Headers: {dict(response.headers)}")
+    
+    if show_json and response.headers.get('content-type', '').startswith('application/json'):
+        try:
+            json_data = response.json()
+            print(f"Response JSON:\n{json.dumps(json_data, indent=2)}")
+        except:
+            print(f"Response Text: {response.text}")
+    elif response.text and len(response.text) < 1000:
+        print(f"Response Text: {response.text}")
+    print(f"{'='*50}\n")
+
+# Step 1: Generate upload URL
+print("🚀 Starting vid2scene API test...")
+video_file = "my_video.mp4"
+file_extension = os.path.splitext(video_file)[1].lstrip('.')
+
+print(f"📁 Video file: {video_file}")
+print(f"📄 File extension: {file_extension}")
+print("🔗 Generating upload URL...")
+
+upload_response = requests.post(
+    f"{BASE_URL}/generate-upload-url/",
+    headers={**headers, "Content-Type": "application/json"},
+    json={"file_extension": file_extension}
+)
+print_response("1: Generate Upload URL", upload_response)
+upload_response.raise_for_status()
+upload_data = upload_response.json()
+
+# Step 2: Upload video
+print("📤 Uploading video to blob storage...")
+file_size = os.path.getsize(video_file)
+print(f"📊 File size: {file_size:,} bytes ({file_size/1024/1024:.2f} MB)")
+
+with open(video_file, 'rb') as f:
+    upload_result = requests.put(
+        upload_data["url"],
+        headers={"x-ms-blob-type": "BlockBlob"},
+        data=f
+    )
+    print_response("2: Upload Video", upload_result, show_json=False)
+    upload_result.raise_for_status()
+
+print("✅ Video upload complete!")
+
+# Step 3: Create job
+print("🎬 Creating processing job...")
+job_payload = {
+    "blob_name": upload_data["blob_name"],
+    "title": "My Python Upload",
+    "public": False,
+    "reconstruction_method": "glomap",
+    "training_max_num_gaussians": 300000,
+    "training_num_steps": 10000,
+    "remove_background": False,
+    "camera_type": "orbital",  # Optional: set default camera control mode
+}
+print(f"📋 Job payload:\n{json.dumps(job_payload, indent=2)}")
+
+job_response = requests.post(
+    f"{BASE_URL}/submit-job/",
+    headers={**headers, "Content-Type": "application/json"},
+    json=job_payload
+)
+print_response("3: Create Job", job_response)
+job_response.raise_for_status()
+job_data = job_response.json()
+job_id = job_data["job_id"]
+
+print(f"🎯 Job created successfully!")
+print(f"🆔 Job ID: {job_id}")
+
+# Step 4: Monitor progress
+print("⏳ Monitoring job progress...")
+start_time = time.time()
+check_count = 0
+
+while True:
+    check_count += 1
+    elapsed_time = time.time() - start_time
+    print(f"\n⏱️  Check #{check_count} (elapsed: {elapsed_time:.1f}s)")
+    
+    status_response = requests.get(
+        f"{BASE_URL}/jobs/{job_id}/",
+        headers=headers
+    )
+    print_response(f"4.{check_count}: Check Status", status_response)
+    status_response.raise_for_status()
+    status_data = status_response.json()
+
+    pc = status_data.get('percent_complete')
+    pc_str = f" ({pc}%)" if pc is not None else ""
+    status = status_data['status']
+    
+    print(f"📊 Status: {status}{pc_str}")
+    
+    # Print additional status details if available
+    if 'current_step' in status_data:
+        print(f"🔄 Current step: {status_data['current_step']}")
+    if 'estimated_time_remaining' in status_data:
+        print(f"⏰ ETA: {status_data['estimated_time_remaining']}")
+
+    if status == "Finished":
+        print("🎉 Processing complete!")
+        break
+    if status == "Failed":
+        print("❌ Processing failed!")
+        if 'error_message' in status_data:
+            print(f"💥 Error: {status_data['error_message']}")
+        break
+
+    print("💤 Waiting 30 seconds before next check...")
+    time.sleep(30)
+
+# Step 5: Get results
+if status_data["status"] == "Finished":
+    print("\n🎁 Downloading results...")
+    
+    # Download PLY file (follows redirect automatically)
+    print("📥 Attempting to download PLY file...")
+    try:
+        ply_response = requests.get(
+            f"{BASE_URL}/jobs/{job_id}/download/ply/",
+            headers=headers,
+            stream=True
+        )
+        print_response("5.1: Download PLY", ply_response, show_json=False)
+        
+        if ply_response.status_code == 200:
+            filename = f"{job_id}_scene.ply"
+            with open(filename, 'wb') as f:
+                downloaded = 0
+                for chunk in ply_response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if downloaded % (1024*1024) == 0:  # Print every MB
+                            print(f"📥 Downloaded: {downloaded/1024/1024:.1f} MB")
+            
+            final_size = os.path.getsize(filename)
+            print(f"✅ PLY file downloaded: {filename} ({final_size:,} bytes)")
+        else:
+            print("⚠️  PLY not available for this job")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error downloading PLY file: {e}")
+
+    # Download SPZ file (follows redirect automatically)
+    print("📥 Attempting to download SPZ file...")
+    try:
+        spz_response = requests.get(
+            f"{BASE_URL}/jobs/{job_id}/download/spz/",
+            headers=headers,
+            stream=True
+        )
+        print_response("5.2: Download SPZ", spz_response, show_json=False)
+        
+        if spz_response.status_code == 200:
+            filename = f"{job_id}_scene.spz"
+            with open(filename, 'wb') as f:
+                downloaded = 0
+                for chunk in spz_response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if downloaded % (1024*1024) == 0:  # Print every MB
+                            print(f"📥 Downloaded: {downloaded/1024/1024:.1f} MB")
+            
+            final_size = os.path.getsize(filename)
+            print(f"✅ SPZ file downloaded: {filename} ({final_size:,} bytes)")
+        else:
+            print("⚠️  SPZ not available for this job")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error downloading SPZ file: {e}")
+
+    # Get preview image (302 redirect)
+    print("🖼️  Getting preview image URL...")
+    preview_head = requests.head(
+        f"{BASE_URL}/jobs/{job_id}/preview/",
+        headers=headers,
+        allow_redirects=False
+    )
+    print_response("5.3: Get Preview URL", preview_head, show_json=False)
+    
+    if preview_head.status_code == 302:
+        preview_url = preview_head.headers.get('Location')
+        print(f"🖼️  Preview image URL: {preview_url}")
+    else:
+        print("⚠️  Preview image not available")
+
+print(f"\n🏁 Script completed! Total runtime: {time.time() - start_time:.1f} seconds")</code></pre>
+            </div>
+
+
+
+            <h2>Best Practices</h2>
+            <ul>
+                <li><strong>Video Quality</strong>: Use high-quality videos with good lighting for best results</li>
+                <li><strong>Camera Movement</strong>: Smooth camera movements work better than shaky footage</li>
+                <li><strong>Scene Content</strong>: Scenes with distinct features and textures process better</li>
+                <li><strong>Duration</strong>: 2 to 3 minute videos typically produce the best results</li>
+                <li><strong>Rate Limiting</strong>: Respect rate limits to avoid getting blocked</li>
+                <li><strong>Error Handling</strong>: Always check response status codes and handle errors gracefully</li>
+            </ul>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li>Read the <a href="{% url 'authentication_docs' %}">Authentication Guide</a> for security best practices</li>
+                <li>Explore all <a href="{% url 'endpoints_docs' %}">API Endpoints</a> for advanced features</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'documentation/js/docs.js' %}"></script>
+{% endblock %}

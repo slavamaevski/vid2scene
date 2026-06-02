@@ -1,0 +1,69 @@
+/* Static gradient (default) */
+.pro-gradient {
+  background: linear-gradient(90deg, #5761d9, var(--bs-orange)) !important;
+  font-weight: 600 !important;
+  border: none;
+  color: white;
+}
+
+/* Dynamic gradient with hover effects */
+.pro-gradient-dynamic {
+  background: linear-gradient(in lab to right, #5761d9, var(--bs-orange)) !important;
+  font-weight: 600 !important;
+  transition-property: filter, box-shadow, transform;
+  transition-duration: 0.4s;
+  transition-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+  border: none;
+  backface-visibility: hidden;
+  transform: translateZ(0) scale(1.0);
+  will-change: transform;
+}
+
+.pro-gradient-dynamic:hover {
+  filter: brightness(1.15);
+}
+
+.pro-gradient-text {
+  background: linear-gradient(in lab to right, #5761d9, var(--bs-orange));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+}
+
+.pro-badge {
+  display: inline-block;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  vertical-align: top;
+  color: white;
+}
+
+.pro-gradient-static {
+  background: linear-gradient(in lab to right, #5761d9, var(--bs-orange)) !important;
+  font-weight: 600 !important;
+  border: none;
+  color: white;
+}
+
+/* Enterprise badge styles */
+.ent-gradient {
+  background: #2e8b57 !important;
+  font-weight: 600 !important;
+  border: none;
+  color: white;
+}
+
+.ent-badge {
+  display: inline-block;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  vertical-align: top;
+  color: white;
+}

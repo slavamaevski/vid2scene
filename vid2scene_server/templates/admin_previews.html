@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Admin Preview Images</h1>
+    <p>Showing all scenes with preview images ({{ scenes.count }} total)</p>
+    
+    <div class="row">
+        {% for scene in scenes %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <img src="{% url 'preview_image' scene.id %}" class="card-img-top" alt="Preview for {{ scene.title }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ scene.title }}</h5>
+                    <p class="card-text">
+                        <small>ID: {{ scene.id }}</small><br>
+                        <small>Uploaded: {{ scene.uploaded_at|date:"Y-m-d H:i" }}</small><br>
+                        <small>User: {{ scene.user|default:"Anonymous" }}</small>
+                    </p>
+                    <a href="{% url 'check_status' scene.id %}" class="btn btn-primary">View Scene</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <p>No scenes with preview images found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

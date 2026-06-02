@@ -1,0 +1,674 @@
+[
+  {
+    "id": "c40b0bae-0db9-4b8d-8793-1e749c27b246",
+    "title": "Holiday Courtyard",
+    "camera_data": {
+      "up": {
+        "x": 0.09232440900489453,
+        "y": 0.11312617867461129,
+        "z": 0.9892818967313498
+      },
+      "lookAt": {
+        "x": 0.3705590254838056,
+        "y": -0.1625196782509098,
+        "z": 0.03110980090497642
+      },
+      "position": {
+        "x": -0.5162587247180719,
+        "y": 0.2742708579408468,
+        "z": 0.18200150187026057
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 26
+  },
+  {
+    "id": "b3d0ccc3-83da-4448-8142-f72696d363b8",
+    "title": "Winter Frozen Lake",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "lookAt": {
+        "x": -0.20872788743254037,
+        "y": 0.05269338049684058,
+        "z": -0.026247931125892476
+      },
+      "position": {
+        "x": -0.2326032718628808,
+        "y": -1.0584812398185504,
+        "z": -0.006654364097981213
+      }
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 25
+  },
+  {
+    "id": "2b709d33-a640-4d53-b953-7fcb62c5fd3d",
+    "title": "Yakushima Forest",
+    "camera_data": {
+      "up": {
+        "x": 0.10603787194731705,
+        "y": 0.10111478310377023,
+        "z": 0.9892076477417481
+      },
+      "lookAt": {
+        "x": -0.13293523030278376,
+        "y": -1.2249786902786863,
+        "z": 0.10004052728032431
+      },
+      "position": {
+        "x": -1.041594977154196,
+        "y": -1.6393334817676444,
+        "z": 0.15149508220085306
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 24
+  },
+  {
+    "id": "b53d31ab-e323-4759-8ce4-6fc5fa20b542",
+    "title": "Goat Peak",
+    "camera_data": {
+      "up": {
+        "x": -0.05358466836886773,
+        "y": 0.13010703363701318,
+        "z": 0.9900509295556345
+      },
+      "lookAt": {
+        "x": 0.4365798332215128,
+        "y": -0.8137675381154714,
+        "z": 0.5767208517988214
+      },
+      "position": {
+        "x": -0.26296901332245587,
+        "y": -0.10618905622736573,
+        "z": 0.47690049682085733
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 23
+  },
+  {
+    "id": "5e2c6244-b184-4e3b-ab9f-f383280c3d67",
+    "title": "tsujigahana",
+    "camera_data": {
+      "up": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": 0.0
+      },
+      "lookAt": {
+        "x": 0.01619107681709439,
+        "y": -0.03788613156947222,
+        "z": -0.09764502469868719
+      },
+      "position": {
+        "x": -0.27964999803703916,
+        "y": -0.14026372628270123,
+        "z": 1.7775423712675091
+      }
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 22
+  },
+  {
+    "id": "6ec28076-bc4d-4bb4-9c48-28e88a1e6285",
+    "title": "VRC Home Horizon Lock",
+    "camera_data": {
+      "up": {
+        "x": 0.0,
+        "y": -1.0,
+        "z": 0.0
+      },
+      "lookAt": {
+        "x": -0.0005250804511892993,
+        "y": -0.00874623588862528,
+        "z": -0.6962058204447208
+      },
+      "position": {
+        "x": -0.0025886378531142524,
+        "y": 0.011229769254854789,
+        "z": 0.6003289570606796
+      }
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 21
+  },
+  {
+    "id": "9fd510a8-43a1-4edb-be2b-9ff92d6c5c23",
+    "title": "Charlie Brown",
+    "camera_data": {
+      "up": {
+        "x": -0.07361403151121196,
+        "y": 0.1452708712402735,
+        "z": 0.9866495570027679
+      },
+      "lookAt": {
+        "x": 0.032427696006436496,
+        "y": 0.10284036519416352,
+        "z": 0.0913874263550078
+      },
+      "position": {
+        "x": 2.2520593264046926,
+        "y": 0.8760799819521662,
+        "z": 1.4348235573054127
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 20
+  },
+  {
+    "id": "f86e0734-c3b7-421e-9bea-e7698eee84a0",
+    "title": "Kirby",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": -1
+      },
+      "lookAt": {
+        "x": -0.037152702785857486,
+        "y": -0.014737635250487453,
+        "z": 0.03614643862197446
+      },
+      "position": {
+        "x": 0.671988000753636,
+        "y": 0.938774578148692,
+        "z": -0.3699735279645751
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 19
+  },
+  {
+    "id": "fe302ea2-3830-4c70-ab30-4e67c53e29d9",
+    "title": "Nottingham Memorial Gardens",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "lookAt": {
+        "x": 0.3277909768820613,
+        "y": 0.13832801371115105,
+        "z": 0.01675543093491735
+      },
+      "position": {
+        "x": 0.7228235807084031,
+        "y": -0.4777126200997835,
+        "z": -1.0805329072275682
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 18
+  },
+  {
+    "id": "df0615af-7f40-458f-b2a6-8da0321c2d2b",
+    "title": "Community by Hank Willis Thomas",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": -1.0000000000000002
+      },
+      "lookAt": {
+        "x": 0.1955226090116165,
+        "y": -0.10414184688020493,
+        "z": 0.056027057473138395
+      },
+      "position": {
+        "x": 0.05041235312819482,
+        "y": -1.3650286197662356,
+        "z": 0.11185448616743088
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 17
+  },
+  {
+    "id": "db78b05f-cfc9-4288-9353-4c65f59e13de",
+    "title": "James School",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "lookAt": {
+        "x": -0.15721212453955896,
+        "y": 0.5652956836501979,
+        "z": 0.16969551981649636
+      },
+      "position": {
+        "x": 1.119193196296692,
+        "y": -0.8387722373008728,
+        "z": -0.6123715043067932
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 16
+  },
+  {
+    "id": "d9b11d8f-a050-4873-8438-0575720d88e2",
+    "title": "Schillerpark 1",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1.0000000000000002
+      },
+      "lookAt": {
+        "x": 0.7576188882097615,
+        "y": -2.018310055426249,
+        "z": 0.5922021594592393
+      },
+      "position": {
+        "x": 2.858589887619019,
+        "y": -2.3527553081512456,
+        "z": 1.319268822669983
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 15
+  },
+  {
+    "id": "cc3ef3f2-2147-489c-9bc0-dc7db0596218",
+    "title": "Wilford Suspension Bridge",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "lookAt": {
+        "x": -0.4078804480500363,
+        "y": 0.03331812969804154,
+        "z": -0.02124982818012528
+      },
+      "position": {
+        "x": 0.3350987801543549,
+        "y": -0.9412331349862924,
+        "z": -0.9594119410188964
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 14
+  },
+  {
+    "id": "be1a4236-9a4a-455a-84d6-eceb365000f9",
+    "title": "gas tower edinburgh",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "lookAt": {
+        "x": -0.08274219179975184,
+        "y": 0.20048557856550336,
+        "z": -0.00288125791234232
+      },
+      "position": {
+        "x": 0.8477491736412048,
+        "y": -0.34546077251434326,
+        "z": -0.6541712880134583
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 13
+  },
+  {
+    "id": "bc62786c-a2bc-4e50-8357-8e080ad7be46",
+    "title": "Catedral de Santiago",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "lookAt": {
+        "x": -0.01075080716615466,
+        "y": -0.8662930941541133,
+        "z": 1.9395134277485888
+      },
+      "position": {
+        "x": 1.1968528383185042,
+        "y": -0.5801273135262596,
+        "z": -1.5581670818486755
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 12
+  },
+  {
+    "id": "ac4e2e30-9415-4162-a815-e653ab94d76a",
+    "title": "Fantasy valley AI",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1.0000000000000002
+      },
+      "lookAt": {
+        "x": -0.4841659154390379,
+        "y": -0.011853077437970733,
+        "z": 0.30484241615261565
+      },
+      "position": {
+        "x": -1.3979072570800783,
+        "y": -0.11041233688592916,
+        "z": 0.6990033388137817
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 11
+  },
+  {
+    "id": "94930be5-7a75-497c-816d-72a3116aa7da",
+    "title": "Walkway Flowers",
+    "camera_data": {
+      "up": {
+        "x": -0.005881877627954212,
+        "y": -0.04871096807918368,
+        "z": 0.9987955972591983
+      },
+      "lookAt": {
+        "x": 0.5765614296640225,
+        "y": -0.1389076826302133,
+        "z": 0.12053155210712455
+      },
+      "position": {
+        "x": 1.4863877611774674,
+        "y": -0.5502418165069842,
+        "z": 0.17548859708375783
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 10
+  },
+  {
+    "id": "7846a3a4-6389-4a73-81fe-fd1ecca3d362",
+    "title": "VIN UPSCALE",
+    "camera_data": {
+      "up": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "lookAt": {
+        "x": -0.14417361878940566,
+        "y": 0.07734879578461727,
+        "z": -1.4391981954785924
+      },
+      "position": {
+        "x": 1.0951348543167114,
+        "y": -0.08332248032093048,
+        "z": 0.056420035660266876
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 9
+  },
+  {
+    "id": "75e1c8a8-6ec2-4870-b2e2-6df843513b96",
+    "title": "Forest Stream Moon",
+    "camera_data": {
+      "up": {
+        "x": -0.05143279959637385,
+        "y": -0.37845394282007805,
+        "z": 0.9241900671883552
+      },
+      "lookAt": {
+        "x": 0.02436190910672298,
+        "y": -0.6095868330620322,
+        "z": 0.282425857638205
+      },
+      "position": {
+        "x": 0.9083930632054853,
+        "y": -0.3262217592954685,
+        "z": 0.6541692550941015
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 8
+  },
+  {
+    "id": "63c1a611-91f8-4808-b0fa-edb2f4ae8cc0",
+    "title": "\u4e09\u7530\u3067\u30c6\u30ec\u30ef\u30fc\u30af",
+    "camera_data": {
+      "up": {
+        "x": 0.22861270355675675,
+        "y": -0.26790003763493236,
+        "z": 0.9359304469925489
+      },
+      "lookAt": {
+        "x": -0.774328031590473,
+        "y": 0.6430492354595131,
+        "z": 0.36487348687389504
+      },
+      "position": {
+        "x": -1.515681964812674,
+        "y": 1.2109126177537601,
+        "z": 0.7225402657971132
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 7
+  },
+  {
+    "id": "51e5875b-660d-4998-97bd-fa1e07a92756",
+    "title": "Forest Stream LoFi",
+    "camera_data": {
+      "up": {
+        "x": -0.14890629269418465,
+        "y": -0.37485419298057215,
+        "z": 0.9150471299342772
+      },
+      "lookAt": {
+        "x": -2.0486905490221123,
+        "y": -0.9372122930483365,
+        "z": -0.3169232525213969
+      },
+      "position": {
+        "x": -0.7392976097351743,
+        "y": 2.180868593048642,
+        "z": 4.345167328126295
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 6
+  },
+  {
+    "id": "3f974927-8a00-488e-bc3f-45252da1c28c",
+    "title": "Fountain by Woody Othello",
+    "camera_data": {
+      "up": {
+        "x": 0.14506316938448519,
+        "y": -0.022028257034451548,
+        "z": -0.9891771493418923
+      },
+      "lookAt": {
+        "x": 0.12170215191556044,
+        "y": -0.04788895034246448,
+        "z": -0.5827199027341571
+      },
+      "position": {
+        "x": -1.3182143283934096,
+        "y": -1.6434327634009256,
+        "z": -1.056204079195266
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 5
+  },
+  {
+    "id": "3cfe3628-e375-4e14-a2cd-c01d64c32bd5",
+    "title": "Emeryville Bike Path",
+    "camera_data": {
+      "up": {
+        "x": 0.007229904209427243,
+        "y": -0.9999565551239398,
+        "z": 0.005883566077329714
+      },
+      "lookAt": {
+        "x": 2.9660162564893526,
+        "y": -0.03190219755672795,
+        "z": -0.08444095269378384
+      },
+      "position": {
+        "x": 3.9629711149624582,
+        "y": 0.008165853304923296,
+        "z": -0.1513405899649814
+      },
+      "cameraType": "drone"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 4
+  },
+  {
+    "id": "1900e248-b061-475a-bf7b-862d7b32e19e",
+    "title": "Mansion",
+    "camera_data": {
+      "up": {
+        "x": -0.02056511185591004,
+        "y": -0.01339202596267564,
+        "z": 0.9996988195526535
+      },
+      "lookAt": {
+        "x": -0.031108335506537584,
+        "y": 0.25607717487530895,
+        "z": -0.07383808272436604
+      },
+      "position": {
+        "x": 0.8565743627419511,
+        "y": -0.36266143776850474,
+        "z": 0.5778222738198295
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 3
+  },
+  {
+    "id": "12a65278-e2b8-4d88-8c26-d2aa0f6888e9",
+    "title": "Still In Motion by Alexander Calder",
+    "camera_data": {
+      "up": {
+        "x": -0.09545333675745868,
+        "y": 0.01592776623727762,
+        "z": -0.99530646876455
+      },
+      "lookAt": {
+        "x": -0.006549546827426254,
+        "y": -0.2753552112745428,
+        "z": 0.12323051773168489
+      },
+      "position": {
+        "x": 0.361623140985066,
+        "y": -1.231363945173738,
+        "z": -0.30765712835131653
+      },
+      "cameraType": "orbital"
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 2
+  },
+  {
+    "id": "2c2aa86d-0977-449a-89c7-d38f60028659",
+    "title": "Pumpkin Patch",
+    "camera_data": {
+      "up": {
+        "x": 0.08170463928011076,
+        "y": -0.11802804213814289,
+        "z": -0.9896432353071201
+      },
+      "lookAt": {
+        "x": 0.2937559872847633,
+        "y": 0.08285751269922279,
+        "z": -0.08887743079845406
+      },
+      "position": {
+        "x": -1.1784255872948706,
+        "y": 0.009754341024573648,
+        "z": -0.2903913502102645
+      }
+    },
+    "splat_file": "scene.spz",
+    "splat_type": "spz",
+    "preview_file": "preview.jpg",
+    "sort_order": 1
+  }
+]

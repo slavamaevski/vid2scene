@@ -1,0 +1,23 @@
+plyfile==1.1
+pycolmap_parser @ git+https://github.com/samusynth/pycolmap_parser@1c5ec77f15bdb691a08ef929329b13ce332aa89c
+numpy==1.26.4
+ninja
+jaxtyping
+rich>=12
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.5.1+cu124
+torchaudio
+torchvision
+torchmetrics
+watchdog==5.0.3
+pillow==10.4.0
+transparent-background==1.3.3
+flet==0.27.6
+pilgram==1.2.1
+pyceres==2.4
+pupil-apriltags==1.0.4.post11
+open3d==0.19.0
+pyyaml==6.0.3
+decord==0.6.0
+pycocotools==2.0.11
+depth-anything-3 @ git+https://github.com/ByteDance-Seed/depth-anything-3

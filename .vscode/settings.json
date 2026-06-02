@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./vid2scene_core",
+        "./vggt"
+    ]
+}

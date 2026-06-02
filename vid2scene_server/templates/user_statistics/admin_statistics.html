@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% load waffle_tags %}
+
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Admin Statistics</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">General Statistics</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">Total Users: {{ total_users }}</li>
+                        <li class="list-group-item">Weekly Active Users: {{ active_users_7d }} ({{ active_user_percentage_7d }}%)</li>
+                        <li class="list-group-item">Monthly Active Users: {{ active_users_30d }} ({{ active_user_percentage_30d }}%)</li>
+                        <li class="list-group-item">Scenes by Non-Admins: {{ scenes_by_others }}</li>
+                        <li class="list-group-item">Scene Success Rate: {{ success_rate }}%</li>
+                        <li class="list-group-item">Users with 2+ Scenes: {{ users_with_scenes }}</li>
+                        <li class="list-group-item">Average Scenes per User: {{ avg_scenes_per_user }}</li>
+                        <li class="list-group-item">Average Scenes per User (who created at least one scene): {{ avg_scenes_per_user_at_least_one }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Top 5 Users by Scene Count</h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Scene Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in scenes_per_user %}
+                                <tr>
+                                    <td>{{ user.user__username|default:"Anonymous" }}</td>
+                                    <td>{{ user.scene_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Scenes by Day</h5>
+                    <canvas id="scenesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">New Users by Day</h5>
+                    <canvas id="signupsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Log whether test_waffle flag is enabled
+    {% flag "test_waffle" %}
+    const testWaffleEnabled = true;
+    {% else %}
+    const testWaffleEnabled = false;
+    {% endflag %}
+    console.log('test_waffle flag enabled: ' + testWaffleEnabled);
+    
+    // Helper function to fill in missing dates
+    function fillMissingDates(rawData) {
+        const filledData = [];
+        if (rawData.length > 0) {
+            let currentDate = new Date(rawData[0].date);
+            const endDate = new Date(rawData[rawData.length - 1].date);
+            
+            while (currentDate <= endDate) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const existingData = rawData.find(d => d.date === dateStr);
+                filledData.push({
+                    date: dateStr,
+                    count: existingData ? existingData.count : 0
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+        return filledData;
+    }
+
+    // Scenes Chart
+    const scenesCtx = document.getElementById('scenesChart').getContext('2d');
+    const rawScenesData = [
+        {% for day in scenes_by_day %}
+            {
+                date: '{{ day.date|date:"Y-m-d" }}',
+                count: {{ day.count }}
+            },
+        {% endfor %}
+    ];
+    
+    // Sort and fill missing dates
+    rawScenesData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const filledScenesData = fillMissingDates(rawScenesData);
+    
+    const scenesData = {
+        labels: filledScenesData.map(d => d.date),
+        datasets: [{
+            label: 'Number of Scenes',
+            data: filledScenesData.map(d => d.count),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+        }]
+    };
+
+    const chartConfig = {
+        type: 'line',
+        data: scenesData,
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 10,
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    };
+
+    new Chart(scenesCtx, chartConfig);
+
+    // Signups Chart
+    const signupsCtx = document.getElementById('signupsChart').getContext('2d');
+    const rawSignupsData = [
+        {% for day in signups_by_day %}
+            {
+                date: '{{ day.date|date:"Y-m-d" }}',
+                count: {{ day.count }}
+            },
+        {% endfor %}
+    ];
+    
+    // Sort and fill missing dates
+    rawSignupsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const filledSignupsData = fillMissingDates(rawSignupsData);
+    
+    const signupsData = {
+        labels: filledSignupsData.map(d => d.date),
+        datasets: [{
+            label: 'New Users',
+            data: filledSignupsData.map(d => d.count),
+            borderColor: 'rgb(153, 102, 255)',
+            tension: 0.1
+        }]
+    };
+
+    const signupsConfig = {
+        type: 'line',
+        data: signupsData,
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    ticks: {
+                        maxTicksLimit: 10,
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    };
+
+    new Chart(signupsCtx, signupsConfig);
+});
+</script>
+{% endblock %}

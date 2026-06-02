@@ -1,0 +1,867 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3DGS AutoLOD - vid2scene</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" />
+    {% include "partials/analytics.html" %}
+    <style>
+        :root {
+            /* Branding Colors */
+            --pro-gradient-start: #5761d9;
+            --pro-gradient-end: #fd7e14;
+
+            /* Dark Theme Colors */
+            --bg-body: #1a1a2e;
+            --bg-container: #16213e;
+            --bg-input: #0f0f23;
+            --text-main: #f8f9fa;
+            --text-muted: #8e9aaf;
+            --border-color: #2a2a44;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Simplified Navbar */
+        .navbar {
+            background: transparent;
+            padding: 1.5rem 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-content {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.4rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            letter-spacing: -0.5px;
+        }
+
+        .navbar-brand img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .navbar-brand sub {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 400;
+            margin-top: 4px;
+        }
+
+        .nav-links {
+            margin-left: auto;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        /* Main content */
+        main {
+            flex: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+            width: 100%;
+        }
+
+        h1 {
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            font-size: 2.2rem;
+            color: #7d85ea;
+            display: inline-block;
+        }
+
+        p {
+            margin-bottom: 2rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        a {
+            color: #7d85ea;
+            /* Lightened lavender */
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .container {
+            background: var(--bg-container);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            color: #fff;
+        }
+
+        .container h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            opacity: 0.9;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Gradient Button / Label Style */
+        .btn-gradient {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--pro-gradient-start), var(--pro-gradient-end));
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(87, 97, 217, 0.4);
+        }
+
+        .btn-gradient:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(87, 97, 217, 0.6);
+            filter: brightness(1.1);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-gradient:disabled {
+            background: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+            filter: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--pro-gradient-start), var(--pro-gradient-end));
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            border: none;
+            box-shadow: 0 4px 15px rgba(87, 97, 217, 0.3);
+        }
+
+        .file-label:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(87, 97, 217, 0.5);
+            filter: brightness(1.1);
+        }
+
+        input[type="text"],
+        select {
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: #fff;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 400px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--pro-gradient-start);
+        }
+
+        button {
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--pro-gradient-start), var(--pro-gradient-end));
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(87, 97, 217, 0.4);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(87, 97, 217, 0.6);
+            filter: brightness(1.1);
+        }
+
+        button:disabled {
+            background: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+            filter: none;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .settings-row label {
+            min-width: 100px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        #status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #000;
+            border: 1px solid var(--border-color);
+            color: #00ff9d;
+            /* Matrix/Terminal green for status */
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
+            height: 200px;
+            overflow-y: scroll;
+            line-height: 1.5;
+        }
+
+        #downloadSection {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(46, 204, 113, 0.1);
+            /* Transparent green */
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            display: none;
+        }
+
+        #downloadSection a {
+            display: block;
+            color: #2ecc71;
+            /* Green */
+            font-weight: 600;
+            margin: 0.5rem 0;
+            text-decoration: none;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        #downloadSection a:hover {
+            background: rgba(0, 0, 0, 0.4);
+            text-decoration: none;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .small {
+            font-size: 0.875em;
+        }
+
+        /* Minimal Footer */
+        footer {
+            margin-top: 3rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            background: transparent;
+        }
+
+        footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin: 0 0.5rem;
+        }
+
+        footer a:hover {
+            color: #fff;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-container);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid var(--border-color);
+            position: relative;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+    </style>
+
+</head>
+
+<body>
+    <header class="navbar">
+        <div class="navbar-content">
+            <a href="/" class="navbar-brand">
+                <img src="{% static 'images/samusynth_logo.webp' %}" alt="vid2scene Logo">
+                vid2scene <sub>Beta</sub>
+            </a>
+            <nav class="nav-links">
+                <a href="/examples/">Examples</a>
+                <a href="/upload/">Upload</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <h1>3DGS AutoLOD</h1>
+        <p>Generate LOD versions of 3D Gaussian Splatting PLY files in your browser.</p>
+        <div class="container">
+            <h2>1. Select Input File</h2>
+            <label class="file-label">
+                📁 Choose PLY File
+                <input type="file" id="fileInput" accept=".ply">
+            </label>
+            <span id="fileName" style="margin-left: 1rem; color: var(--text-muted);">No file selected</span>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem; margin-bottom: 0;">
+                <i class="bi bi-info-circle"></i> <strong>64-bit Mode:</strong> Supports files larger than 1GB, but is
+                slower.
+                <a href="{% url 'autolod' %}" style="color: var(--pro-gradient-start); text-decoration: underline;">Use
+                    the standard build</a> for faster processing of smaller files.
+                <br>
+                For native performance and commercial use, contact <a href="mailto:{{ contact_email }}"
+                    style="color: var(--text-muted); text-decoration: underline;">{{ contact_email }}</a> for the
+                native binary.
+            </p>
+        </div>
+
+        <div class="container">
+            <h2>2. LOD Settings</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                Use <strong>Percentage</strong> to reduce to a fraction of the original (e.g. 50%), or <strong>Absolute
+                    Count</strong> to target a specific number of gaussians. It will save a separate PLY file for each
+                comma separated value.
+            </p>
+            <div class="settings-row">
+                <label>Mode:</label>
+                <select id="targetMode">
+                    <option value="percentage">Percentage</option>
+                    <option value="count">Absolute Count</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label>Targets:</label>
+                <input type="text" id="targetInput" value="50,25,10">
+            </div>
+            <div class="hint" id="targetHint">Comma-separated percentages (e.g., 50,25,10 = keep 50%, 25%, 10%)</div>
+        </div>
+
+        <div class="container">
+            <h2>3. Process</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                By generating, you agree to the <a href="#" id="openTermsInline"
+                    style="color: var(--pro-gradient-start); text-decoration: underline;">Terms of Use</a> for using
+                3DGS AutoLOD.
+            </p>
+            <button id="processBtn" disabled>⚡ Generate LODs</button>
+            <div id="downloadSection">
+                <strong>📥 Downloads:</strong>
+                <div id="downloadLinks"></div>
+            </div>
+            <div id="status">Initializing WASM...</div>
+        </div>
+    </main>
+
+    <footer>
+        <div style="margin-bottom: 2rem;">
+            <h4 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem; text-align: center;">vid2scene</h4>
+            <div
+                style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; align-items: center;">
+                <a href="https://github.com/samuelm2/vid2scene" target="_blank" rel="noopener noreferrer" style="color: var(--pro-gradient-start);">
+                    github.com/samuelm2/vid2scene
+                </a>
+                <a href="https://discord.gg/W8rEufM2Dz" target="_blank" rel="noopener noreferrer" style="color: var(--pro-gradient-start);">
+                    Discord Server
+                </a>
+            </div>
+        </div>
+        <div style="color: var(--text-muted); font-size: 0.85rem;">
+            <div style="color: var(--text-muted); font-size: 0.85rem;">
+                <a href="#" id="openTerms">Terms of Use</a>
+                <span style="margin: 0 0.5rem;">•</span>
+                <a href="#" id="openLicenses">Licenses</a>
+            </div>
+    </footer>
+
+    <!-- Terms Modal -->
+    <div class="modal-overlay" id="termsModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeTerms">&times;</button>
+            <h2 style="margin-top: 0; color: #fff; font-size: 1.4rem;">Terms of Use</h2>
+            <div style="color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; margin-top: 1rem;">
+                <p style="margin-bottom: 1rem;">
+                    <strong>Non-Commercial Use Only:</strong> This software is provided strictly for non-commercial,
+                    personal, or educational use.
+                </p>
+                <p style="margin-bottom: 1rem;">
+                    <strong>No Reverse Engineering:</strong> You agree not to reverse engineer, decompile, disassemble,
+                    or derive source code from the WebAssembly (WASM) binary or any part of this software.
+                </p>
+                <p style="margin-bottom: 1rem;">
+                    <strong>Commercial Licensing:</strong> You may not use the AutoLOD WASM code or this application for
+                    any commercial purposes without an explicit license. For commercial licensing inquiries, please
+                    contact <a href="mailto:{{ contact_email }}"
+                        style="color: var(--pro-gradient-start);">{{ contact_email }}</a>.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>No Warranty:</strong> This software is provided "as is" without warranty of any kind. Don't
+                    blame me if your PC catches fire or your cat runs away.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Licenses Modal -->
+    <div class="modal-overlay" id="licensesModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <button class="modal-close" id="closeLicenses">&times;</button>
+            <h2 style="margin-top: 0; color: #fff; font-size: 1.4rem;">Open Source Licenses</h2>
+            <div
+                style="color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; margin-top: 1rem; max-height: 60vh; overflow-y: auto;">
+                <p>This software uses the following open source components:</p>
+
+                <div style="margin-top: 1.5rem;">
+                    <hr style="border-color: var(--border-color); margin: 1.5rem 0;">
+
+                    <div style="margin-bottom: 2rem;">
+                        <strong style="color: #fff;">SimpleOMP</strong><br>
+                        <span style="font-size: 0.85rem; color: #aaa;">Copyright (c) 2025 Mu-Tsun Tsai</span><br>
+                        <span style="font-size: 0.85rem; color: #aaa;">MIT License</span>
+                        <pre
+                            style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 4px; white-space: pre-wrap; font-size: 0.75rem; color: #aaa; font-family: monospace; margin-top: 0.5rem;">
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                    </pre>
+                    </div>
+
+                    <div style="margin-bottom: 2rem;">
+                        <strong style="color: #fff;">Tencent NCNN</strong><br>
+                        <span style="font-size: 0.85rem; color: #aaa;">Copyright (c) 2017 Tencent</span><br>
+                        <span style="font-size: 0.85rem; color: #aaa;">BSD-3-Clause License</span>
+                        <pre
+                            style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 4px; white-space: pre-wrap; font-size: 0.75rem; color: #aaa; font-family: monospace; margin-top: 0.5rem;">
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+                    </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="{% static 'autolod64/3dgs_autolod.js' %}"></script>
+        <script>
+            let Module = null;
+            let inputFile = null;
+            let processingDone = false;
+
+            const fileInput = document.getElementById('fileInput');
+            const fileName = document.getElementById('fileName');
+            const processBtn = document.getElementById('processBtn');
+            const status = document.getElementById('status');
+            const targetMode = document.getElementById('targetMode');
+            const targetInput = document.getElementById('targetInput');
+            const targetHint = document.getElementById('targetHint');
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadLinks = document.getElementById('downloadLinks');
+
+            // Modal Logic
+            const termsModal = document.getElementById('termsModal');
+            document.getElementById('openTerms').addEventListener('click', (e) => {
+                e.preventDefault();
+                termsModal.style.display = 'flex';
+            });
+            document.getElementById('openTermsInline').addEventListener('click', (e) => {
+                e.preventDefault();
+                termsModal.style.display = 'flex';
+            });
+            document.getElementById('closeTerms').addEventListener('click', () => {
+                termsModal.style.display = 'none';
+            });
+            termsModal.addEventListener('click', (e) => {
+                if (e.target === termsModal) termsModal.style.display = 'none';
+            });
+
+            // Licenses Modal Logic
+            const licensesModal = document.getElementById('licensesModal');
+            document.getElementById('openLicenses').addEventListener('click', (e) => {
+                e.preventDefault();
+                licensesModal.style.display = 'flex';
+            });
+            document.getElementById('closeLicenses').addEventListener('click', () => {
+                licensesModal.style.display = 'none';
+            });
+            licensesModal.addEventListener('click', (e) => {
+                if (e.target === licensesModal) licensesModal.style.display = 'none';
+            });
+
+            // Update hint text when mode changes
+            targetMode.addEventListener('change', () => {
+                if (targetMode.value === 'percentage') {
+                    targetInput.value = '50,25,10';
+                    targetHint.textContent = 'Comma-separated percentages (e.g., 50,25,10 = keep 50%, 25%, 10%)';
+                } else {
+                    targetInput.value = '500000,250000,100000';
+                    targetHint.textContent = 'Comma-separated counts (e.g., 500000,100000)';
+                }
+            });
+
+            // Terminal print
+            function termPrint(text) {
+                if (!text) return;
+                if (text.includes('keepRuntimeAlive')) return; // useless emscripten message
+
+                // Handle carriage return: update last line instead of appending
+                let isCarriageReturn = false;
+                if (text.includes('\r')) {
+                    const segments = text.split('\r');
+                    text = segments[segments.length - 1];
+                    isCarriageReturn = true;
+                }
+
+                const cleanText = text.replace(/[\n]/g, '').trim();
+                if (!cleanText) return;
+
+                // Carriage return = update last line (standard terminal behavior)
+                if (isCarriageReturn && status.lastChild) {
+                    status.lastChild.textContent = cleanText;
+                } else {
+                    const line = document.createElement('div');
+                    line.textContent = cleanText;
+                    status.appendChild(line);
+                }
+                status.scrollTop = status.scrollHeight;
+            }
+
+            function clearTerminal() {
+                status.innerHTML = '';
+            }
+
+            function updateProcessBtn() {
+                processBtn.disabled = !Module || !inputFile || !targetInput.value.trim();
+            }
+
+            targetInput.addEventListener('input', updateProcessBtn);
+
+            // Initialize Worker (instead of loading Module in main thread)
+            let worker = null;
+
+            async function init() {
+                try {
+                    // 64-bit: Use Worker with WORKERFS for large file support
+                    termPrint('Loading WASM worker (64-bit mode)...');
+                    worker = new Worker("{% static 'autolod64/autolod_worker.js' %}");
+
+                    worker.onmessage = function (e) {
+                        const msg = e.data;
+                        switch (msg.type) {
+                            case 'ready':
+                                console.log("AutoLOD Worker ready.");
+                                termPrint('Ready! Select a PLY file.');
+                                Module = true; // Flag that we're ready
+                                updateProcessBtn();
+                                break;
+                            case 'print':
+                                termPrint(msg.text);
+                                if (msg.text && msg.text.includes('Done!')) {
+                                    processingDone = true;
+                                }
+                                break;
+                            case 'printErr':
+                                termPrint(msg.text);
+                                break;
+                            case 'lodReady':
+                                handleLodReady(msg.name, msg.data);
+                                break;
+                            case 'done':
+                                handleResults(msg.results);
+                                break;
+                            case 'error':
+                                termPrint('❌ Error: ' + msg.message);
+                                processBtn.innerText = "Retry";
+                                processBtn.disabled = false;
+                                break;
+                        }
+                    };
+
+                    worker.onerror = function (e) {
+                        termPrint('❌ Worker error: ' + e.message);
+                        console.error(e);
+                    };
+
+                    // Initialize the worker
+                    worker.postMessage({ type: 'init' });
+
+                } catch (e) {
+                    termPrint('Error loading WASM: ' + e.message);
+                    console.error(e);
+                }
+            }
+
+            // Track sent LOD files (for 32-bit mode)
+            let sentFiles = new Set();
+
+            // Send LOD file for download (used by 32-bit direct mode)
+            function sendLodFile(lodPath) {
+                if (sentFiles.has(lodPath)) return;
+                sentFiles.add(lodPath);
+
+                try {
+                    const data = Module.FS.readFile(lodPath);
+                    const fname = lodPath.split('/').pop();
+                    Module.FS.unlink(lodPath);
+                    handleLodReady(fname, data);
+                    termPrint(`📥 ${fname} ready for download`);
+                } catch (err) {
+                    termPrint('Failed to read LOD: ' + err.message);
+                }
+            }
+
+            // Handle LOD file ready for download
+            function handleLodReady(name, data) {
+                let blob;
+                const MAX_CHUNK = 1024 * 1024 * 1024;
+                if (data.byteLength > MAX_CHUNK) {
+                    const chunks = [];
+                    for (let i = 0; i < data.byteLength; i += MAX_CHUNK) {
+                        const end = Math.min(i + MAX_CHUNK, data.byteLength);
+                        chunks.push(new Uint8Array(data.buffer, data.byteOffset + i, end - i));
+                    }
+                    blob = new Blob(chunks, { type: 'application/octet-stream' });
+                } else {
+                    blob = new Blob([data], { type: 'application/octet-stream' });
+                }
+                const url = URL.createObjectURL(blob);
+
+                const baseName = inputFile.name.replace('.ply', '');
+                const lodMatch = name.match(/lod(\d+)_(\d+)/);
+                let downloadName;
+                if (lodMatch) {
+                    downloadName = `${baseName}_lod${lodMatch[1]}_${lodMatch[2]}.ply`;
+                } else {
+                    downloadName = `${baseName}_reduced.ply`;
+                }
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = downloadName;
+                a.textContent = `📥 ${downloadName} (${(data.length / 1024 / 1024).toFixed(2)} MB)`;
+                a.style.marginBottom = "0.5rem";
+                downloadLinks.appendChild(a);
+                downloadSection.style.display = 'block';
+            }
+
+            // Handle results from worker
+            function handleResults(results) {
+                const elapsed = ((performance.now() - processStartTime) / 1000).toFixed(1);
+                termPrint(`Processing finished in ${elapsed}s.`);
+
+                for (const { name, data } of results) {
+                    // Create blob in chunks to avoid 2GB limit
+                    let blob;
+                    const MAX_CHUNK = 1024 * 1024 * 1024; // 1GB chunks
+                    if (data.byteLength > MAX_CHUNK) {
+                        const chunks = [];
+                        for (let i = 0; i < data.byteLength; i += MAX_CHUNK) {
+                            const end = Math.min(i + MAX_CHUNK, data.byteLength);
+                            chunks.push(new Uint8Array(data.buffer, data.byteOffset + i, end - i));
+                        }
+                        blob = new Blob(chunks, { type: 'application/octet-stream' });
+                    } else {
+                        blob = new Blob([data], { type: 'application/octet-stream' });
+                    }
+                    const url = URL.createObjectURL(blob);
+
+                    // Create nice filename based on input name
+                    const baseName = inputFile.name.replace('.ply', '');
+                    const lodMatch = name.match(/lod(\d+)_(\d+)/);
+                    let downloadName;
+                    if (lodMatch) {
+                        downloadName = `${baseName}_lod${lodMatch[1]}_${lodMatch[2]}.ply`;
+                    } else {
+                        downloadName = `${baseName}_reduced.ply`;
+                    }
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = downloadName;
+                    a.textContent = `📥 ${downloadName} (${(data.length / 1024 / 1024).toFixed(2)} MB)`;
+                    a.style.marginBottom = "0.5rem";
+                    downloadLinks.appendChild(a);
+                }
+
+                downloadSection.style.display = 'block';
+                termPrint(`✅ All done! After downloading, please refresh the page to try again.`);
+                processBtn.innerText = "⚡ Generate LODs";
+                processBtn.disabled = false;
+            }
+
+            // File selection
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    inputFile = e.target.files[0];
+                    fileName.textContent = `${inputFile.name} (${(inputFile.size / 1024 / 1024).toFixed(1)} MB)`;
+                    updateProcessBtn();
+                }
+            });
+
+            let processStartTime = 0;
+
+            // Process button click handler
+            processBtn.addEventListener('click', async () => {
+                if (!inputFile || !Module) return;
+
+                processBtn.disabled = true;
+                processBtn.innerText = "Running...";
+                downloadSection.style.display = 'none';
+                downloadLinks.innerHTML = '';
+                clearTerminal();
+
+                termPrint(`Mounting file...`);
+                termPrint(`File: ${inputFile.name} (${(inputFile.size / 1024 / 1024).toFixed(2)} MB)`);
+
+                processStartTime = performance.now();
+                processingDone = false;
+                sentFiles.clear();
+
+                // Build arguments
+                const targets = targetInput.value.trim();
+                const args = [];
+                if (targetMode.value === 'percentage') {
+                    args.push('-r', targets);
+                } else {
+                    args.push('-n', targets);
+                }
+
+                // 64-bit: Send file and args to worker
+                worker.postMessage({
+                    type: 'process',
+                    file: inputFile,
+                    args: args
+                });
+            });
+
+            // Start initialization
+            init();
+        </script>
+</body>
+
+</html>

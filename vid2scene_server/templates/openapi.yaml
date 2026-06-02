@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: vid2scene API
+  version: 1.0.0
+  description: |
+    Transform videos into interactive 3D scenes using advanced computer vision.
+    
+    **Enterprise Only**: API access is restricted to Enterprise subscribers.
+    
+    **Authentication**: All endpoints require API key authentication.
+    
+    **Data Access**: Users can only access their own jobs.
+servers:
+  - url: {{ site_url }}
+paths:
+  /api/v1/generate-upload-url/:
+    post:
+      summary: Generate upload URL for direct upload
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_extension:
+                  type: string
+                  example: mp4
+              required: [file_extension]
+      responses:
+        '200':
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  blob_name:
+                    type: string
+  /api/v1/submit-job/:
+    post:
+      summary: Submit a processing job
+      description: |
+        Create and start a video processing job. Upload the video file first using the 
+        `/generate-upload-url/` endpoint, then submit the job with the returned blob_name.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: Job title/name
+                  example: "My Scene"
+                blob_name:
+                  type: string
+                  description: Blob name returned from generate-upload-url endpoint
+                  example: "videos/550e8400-e29b-41d4-a716-446655440000.mp4"
+                public:
+                  type: boolean
+                  description: Whether the job should be publicly viewable
+                  default: false
+                reconstruction_method:
+                  type: string
+                  enum: [GLOMAP, COLMAP]
+                  description: Reconstruction method to use
+                  default: GLOMAP
+                training_max_num_gaussians:
+                  type: integer
+                  description: Maximum number of Gaussians for training
+                  minimum: 10000
+                  maximum: 2000000
+                  example: 300000
+                training_num_steps:
+                  type: integer
+                  description: Number of training steps
+                  minimum: 1000
+                  maximum: 30000
+                  example: 7000
+                apriltag_size_mm:
+                  type: number
+                  format: float
+                  description: |
+                    Physical size of AprilTag in millimeters, measured from the inner white square. 
+                    When provided, enables automatic scale calibration using AprilTags. Only supports 
+                    tagStandard41h12 family. AprilTags will only be detected if this parameter is included.
+                  minimum: 1.0
+                  maximum: 1000.0
+                  example: 95.6
+                allow_as_example:
+                  type: boolean
+                  description: Allow this job to be used as an example
+                  default: false
+                remove_background:
+                  type: boolean
+                  description: Remove background from images before processing
+                  default: false
+                camera_type:
+                  type: string
+                  enum: [orbital, drone]
+                  description: Default camera control mode for the viewer. If not specified, viewer starts in drone mode.
+                  example: "orbital"
+              required:
+                - title
+                - blob_name
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Job'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error_message:
+                    type: string
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  error_message:
+                    type: string
+  /api/v1/jobs/:
+    get:
+      summary: List jobs
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [queued, processing, finished, failed]
+        - in: query
+          name: public
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of jobs (lightweight response with job_id and title only)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobList'
+  /api/v1/jobs/{job_id}/:
+    parameters:
+      - in: path
+        name: job_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get job details
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+    patch:
+      summary: Update job
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                public: { type: boolean }
+                camera_data: { type: object }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+    put:
+      summary: Replace job (same fields as PATCH)
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                public: { type: boolean }
+                camera_data: { type: object }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+    delete:
+      summary: Delete job
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+  
+  /api/v1/jobs/{job_id}/download/{file_type}/:
+    get:
+      summary: Download file (redirect)
+      description: |
+        Download a specific file type. Returns a 302 redirect to a secure, time-limited download URL. 
+        URLs expire in 15 minutes. Follow redirects to download the file directly from cloud storage.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: file_type
+          required: true
+          schema:
+            type: string
+            enum: [ply, spz]
+          description: Type of file to download
+      responses:
+        '302':
+          description: Redirect to time-limited download URL
+          headers:
+            Location:
+              description: Direct download URL for the file
+              schema:
+                type: string
+                format: uri
+        '400':
+          description: Invalid file type
+        '404':
+          description: Job or file not found
+  /api/v1/jobs/{job_id}/viewer/:
+    get:
+      summary: Get viewer URL
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  /api/v1/jobs/{job_id}/preview/:
+    get:
+      summary: Get preview image (redirect)
+      description: |
+        Returns a 302 redirect to a short-lived SAS URL for the preview image. Follow redirects to download.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '302':
+          description: Redirect to time-limited SAS URL for the preview image
+          headers:
+            Location:
+              description: Direct SAS URL to the image file
+              schema:
+                type: string
+                format: uri
+        '400':
+          description: No preview available yet
+        '403':
+          description: Enterprise API key required
+        '404':
+          description: Job not found
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Use format "Api-Key YOUR_API_KEY_HERE"
+  schemas:
+    JobList:
+      type: object
+      description: Lightweight job information for list operations
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          description: Unique job identifier
+        title:
+          type: string
+          description: Job title/name
+    Job:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, finished, failed]
+        percent_complete:
+          type: integer
+          minimum: 0
+          maximum: 100
+        uploaded_at:
+          type: string
+          format: date-time
+        public:
+          type: boolean
+        reconstruction_method:
+          type: string
+          enum: [glomap, colmap]
+        training_max_num_gaussians:
+          type: integer
+        training_num_steps:
+          type: integer
+        remove_background:
+          type: boolean
+          description: Whether background removal is enabled
+        has_ply:
+          type: boolean
+          description: Whether PLY file is available for download
+        has_spz:
+          type: boolean
+          description: Whether SPZ file is available for download
+        camera_data:
+          type: object
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Subscription Successful - vid2scene{% endblock %}
+
+{% block content %}
+<script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body text-center p-5">
+                    <div class="mb-4">
+                        <span class="display-1 text-success">
+                            <i class="fas fa-check-circle"></i>
+                        </span>
+                    </div>
+                    
+                    <h1 class="card-title mb-4">Welcome to vid2scene Pro!</h1>
+                    
+                    <p class="card-text lead mb-4">
+                        Your subscription has been activated successfully. You now have access to all Pro features.
+                    </p>
+                    
+                    <div class="alert alert-info mb-4">
+                        <strong>Pro Features Include:</strong>
+                        <ul class="list-unstyled mt-2 text-center">
+                            <li><i class="fas fa-check text-success me-2"></i> Higher resolution outputs</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Higher training quality</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Larger video file uploads</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Priority scene processing</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                        <a href="{% url 'upload_page' %}" class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-film me-2"></i>Create New Scene
+                        </a>
+                        
+                        <form action="{% url 'direct-to-customer-portal' %}" method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-secondary btn-lg px-4">
+                                <i class="fas fa-cog me-2"></i>Manage Subscription
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

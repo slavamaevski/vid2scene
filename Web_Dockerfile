@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+#
+# Lightweight Django web/API image for vid2scene self-hosting.
+# (The GPU ML pipeline runs in a separate image, see Worker_Dockerfile.)
+
+# ---- Stage 1: build the Svelte/Vite viewer frontend ----
+FROM node:20-slim AS frontend
+WORKDIR /build/viewer
+COPY vid2scene_server/viewer/package.json vid2scene_server/viewer/package-lock.json ./
+RUN npm ci
+COPY vid2scene_server/viewer/ ./
+# Produces static/manifest.json + static/dist/ (consumed by django-vite in non-dev mode)
+RUN npm run build
+
+# ---- Stage 2: Django app ----
+FROM python:3.11-slim AS web
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    ENVIRONMENT=development \
+    VITE_DEV_MODE=false
+
+WORKDIR /app/vid2scene_server
+
+COPY vid2scene_server/requirements.txt ./requirements.txt
+# tzdata: python:3.11-slim has no IANA tz database, so zoneinfo.ZoneInfo()
+# raises ZoneInfoNotFoundError for any region key (e.g. 'US/Pacific'). The
+# tzdata PyPI package is the documented fallback source.
+RUN pip install --no-cache-dir -r requirements.txt gunicorn tzdata
+
+COPY vid2scene_server/ /app/vid2scene_server/
+# Overlay the freshly built frontend (manifest + dist) from stage 1.
+COPY --from=frontend /build/viewer/static/ /app/vid2scene_server/viewer/static/
+
+COPY scripts/web_entrypoint.sh /usr/local/bin/web_entrypoint.sh
+RUN chmod +x /usr/local/bin/web_entrypoint.sh
+
+EXPOSE 8000
+ENTRYPOINT ["/usr/local/bin/web_entrypoint.sh"]

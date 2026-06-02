@@ -1,0 +1,505 @@
+{% load static %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- Meta Tags and Title are handled by base.html -->
+        <!-- Font Awesome icons (free version)-->
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="theme-color" content="#1a1a1a">
+        <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}"/>
+        <link rel="stylesheet" href="https://bootswatch.com/5/lux/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+        <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+        <script src="{% static 'js/scripts.js' %}"></script>
+        <title>{% block title %} vid2scene - Transform Videos into Immersive 3D Scenes - Free Online Gaussian Splatting {% endblock %}</title>
+        <meta name="description" content="Free online Gaussian splatting platform. Transform 2D videos into photorealistic 3D scenes using our free Gaussian splatting technology. Enterprise API available for programmatic access. No expensive hardware required.">
+        <meta name="keywords" content="free online gaussian splatting, free gaussian splatting, gaussian splatting free, gaussian splatting api, 3d gaussian splatting api, video to 3d api, 3d scene creation, video to 3d, neural rendering, photorealistic 3d, immersive environments, online 3d reconstruction, gaussian splatting rest api, 3d scene generation api">
+        <meta name="robots" content="index, follow">
+        <meta property="og:title" content="Free Online Gaussian Splatting - Transform Videos to 3D Scenes">
+        <meta property="og:description" content="Free online Gaussian splatting platform and API. Transform 2D videos into photorealistic 3D scenes using our free Gaussian splatting technology.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ site_url }}">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Free Online Gaussian Splatting - Transform Videos to 3D Scenes">
+        <meta name="twitter:description" content="Free online Gaussian splatting platform. Transform 2D videos into photorealistic 3D scenes. Enterprise API available for developers.">
+        {% include "partials/analytics.html" %}
+
+        <!-- Schema.org structured data -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "vid2scene - Free Online Gaussian Splatting",
+            "description": "Free online Gaussian splatting platform that transforms 2D videos into photorealistic 3D scenes",
+            "url": "{{ site_url }}",
+            "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Web Browser",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD",
+                "description": "Free online Gaussian splatting service"
+            },
+            "featureList": [
+                "Free online Gaussian splatting",
+                "Transform 2D videos to 3D scenes",
+                "Photorealistic 3D reconstruction",
+                "No expensive hardware required",
+                "Web-based 3D viewer",
+                "REST API for programmatic access",
+                "Gaussian Splatting API for developers"
+            ],
+            "applicationProgrammingInterface": {
+                "@type": "APIReference",
+                "name": "vid2scene Gaussian Splatting API",
+                "url": "{{ site_url }}/docs/api",
+                "description": "RESTful API for programmatic access to Gaussian Splatting 3D scene generation",
+                "documentation": "{{ site_url }}/docs/api",
+                "programmingModel": "REST",
+                "authentication": "API Key"
+            }
+        }
+        </script>
+        
+    </head>
+    <body id="page-top">
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg navbar-dark fixed-top" id="mainNav">
+            <div class="container px-4 px-lg-5">
+                <a class="navbar-brand" href="#">
+                    <img src="{% static 'images/samusynth_logo.webp' %}" alt="vid2scene logo" width="30" height="30" class="d-inline-block align-top" alt="">
+                    vid2scene
+                </a>
+                <ul class="navbar-nav me-auto d-none d-lg-flex">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'jobs_status' %}">My Scenes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'upload_page' %}">Upload</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'api_docs' %}">API Docs</a></li>
+                </ul>
+                <button class="navbar-toggler navbar-toggler-right" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarResponsive">
+                    <ul class="navbar-nav ms-auto">
+                        {% if user.is_authenticated %}
+                        <li class="nav-item d-lg-none"><a class="nav-link" href="{% url 'jobs_status' %}">My Scenes</a></li>
+                        <li class="nav-item d-lg-none"><a class="nav-link" href="{% url 'upload_page' %}">Upload</a></li>
+                        {% endif %}
+                        <li class="nav-item d-lg-none"><a class="nav-link" href="{% url 'api_docs' %}">API Docs</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'upload_page' %}">Try vid2scene</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Masthead (Hero Section)-->
+        <header class="masthead">
+            <div class="video-background">
+                <div id="video-foreground" style="background-image: url('{% static 'assets/img/bg-masthead.jpg' %}');">
+                    {% if landing_video_base_url %}
+                    <video
+                        autoplay
+                        loop
+                        muted
+                        playsinline
+                        style="width: 100%; height: 100%; object-fit: cover;"
+                    >
+                        <!-- Desktop H.265/HEVC (720p) -->
+                        <source
+                            src="{{ landing_video_base_url }}/vid2scene_landing_h265.mp4"
+                            type="video/mp4"
+                            media="(min-width: 768px)">
+
+                        <!-- Desktop H.264 (720p) -->
+                        <source
+                            src="{{ landing_video_base_url }}/vid2scene_landing_h264.mp4"
+                            type="video/mp4"
+                            media="(min-width: 768px)">
+
+                        <!-- Mobile H.265/HEVC (480p) -->
+                        <source
+                            src="{{ landing_video_base_url }}/vid2scene_landing_480p_h265.mp4"
+                            type="video/mp4"
+                            media="(max-width: 767px)">
+
+                        <!-- Mobile H.264 (480p) -->
+                        <source
+                            src="{{ landing_video_base_url }}/vid2scene_landing_480p_h264.mp4"
+                            type="video/mp4"
+                            media="(max-width: 767px)">
+                    </video>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="container px-4 px-lg-5 d-flex h-100 align-items-center justify-content-center">
+                <div class="text-center align-items-center">
+                    <h1 class="mx-auto mb-1 text-uppercase">vid2scene</h1>
+                    <h2 class="text-white-50 mx-auto mt-2 mb-3">Transform 2D Video into Immersive 3D Scenes</h2>
+                        <p class="text-white-50 mx-auto mb-5">Thousands of 3D scenes generated by users to date!</p>
+                    <div class="text-center">       
+                        <a class="btn btn-primary mb-2 mx-auto masthead_button create_button" href="{% url 'example_list' %}">See Examples</a>
+                        <a class="btn btn-primary mb-2 mx-auto masthead_button" href="{% url 'upload_page' %}">Create your 3D Scene</a>
+                        <a class="btn btn-primary mb-2 mx-auto masthead_button" href="{% url 'api_docs' %}">Gaussian Splatting API Reference</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Problem Statement-->
+        <section class="about-section text-center" id="about">
+            <div class="container px-4 px-lg-5">
+                <div class="row gx-4 gx-lg-5 justify-content-center">
+                    <div class="col-lg-8">
+                        <h2 class="text-white mb-4">The Challenge with Creating Photorealistic 3D Environments</h2>
+                        <p class="text-white-50 pb-5 pt-4">
+                            Current solutions for creating photorealistic 3D environments often require expensive hardware. This makes the process inaccessible to many creators and businesses. vid2scene is a free online Gaussian Splatting platform that leverages recent advances in computer graphics research to provide a software-only approach, allowing anybody to create photorealistic 3D scenes from simple 2D videos.
+                        </p>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- How It Works-->
+        <section class="projects-section bg-light">
+            <div class="container px-4 px-lg-5">
+                <h2 class="text-center mb-5">How It Works</h2>
+                <div class="row gx-4 gx-lg-5">
+                    <!-- Step 1: Record -->
+                    <div class="col-md-4 text-center mb-4">
+                        <i class="fas fa-video fa-3x text-primary mb-3"></i>
+                        <h4>Record</h4>
+                        <p>Record a video of your environment. You can use any device that has a camera, including your smartphone.</p>
+                    </div>
+                    <!-- Step 2: Upload -->
+                    <div class="col-md-4 text-center mb-4">
+                        <i class="fas fa-upload fa-3x text-primary mb-3"></i>
+                        <h4>Upload</h4>
+                        <p>Seamlessly upload your video to our platform. We will process it and generate a photorealistic 3D scene using our free online Gaussian Splatting technology.</p>
+                    </div>
+                    <!-- Step 3: Explore -->
+                    <div class="col-md-4 text-center">
+                        <i class="fas fa-search fa-3x text-primary mb-3"></i>
+                        <h4>Explore</h4>
+                        <p>Explore your immersive 3D scene in real-time using our web-based 3D viewer. VR support is coming soon!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Value Proposition-->
+        <section class="projects-section text-center">
+            <div class="container px-4 px-lg-5">
+                <h2 class="mb-4">Advantages</h2>
+                <div class="row gx-4 gx-lg-5 justify-content-center">
+                    <div class="col-md-4 d-flex flex-column align-items-center text-center mb-4">
+                        <i class="fas fa-sliders-h fa-2x text-primary mb-3" aria-hidden="true"></i>
+                        <h5>No Specialized Hardware Required</h5>
+                        <p>All you need is a smartphone to create stunning 3D scenes. No expensive camera equipment required.</p>
+                    </div>
+                    <div class="col-md-4 d-flex flex-column align-items-center text-center mb-4">
+                        <i class="fas fa-eye fa-2x text-primary mb-3" aria-hidden="true"></i>
+                        <h5>Unconstrained, Moveable Viewpoint</h5>
+                        <p>You can explore your scene from any angle or position within the environment. Other solutions are limited to fixed points-of-view.</p>
+                    </div>
+                    <div class="col-md-4 d-flex flex-column align-items-center text-center mb-4">
+                        <i class="fas fa-lightbulb fa-2x text-primary mb-3" aria-hidden="true"></i>
+                        <h5>Realistic Lighting and Reflections</h5>
+                        <p>Current 3D scanning technology provides a static look, without any dynamic light reflections. vid2scene uses realistic lighting and reflections for free and by default.</p>
+                    </div>
+                    <div class="col-md-4 d-flex flex-column align-items-center text-center mb-4">
+                        <i class="fas fa-display fa-2x text-primary mb-3" aria-hidden="true"></i>
+                        <h5>Real-Time Rendering on Any Device</h5>
+                        <p>Experience your 3D scenes seamlessly across all your devices.</p>
+                    </div>
+                    <div class="col-md-4 d-flex flex-column align-items-center text-center mb-4">
+                        <i class="fas fa-vr-cardboard fa-2x text-primary mb-3" aria-hidden="true"></i>
+                        <h5>VR Support<br>(coming soon)</h5>
+                        <p>Dive into your 3D scenes with VR integration.</p>
+                    </div>
+                    <div class="col-md-4 d-flex flex-column align-items-center text-center mb-4">
+                        <i class="fas fa-plug fa-2x text-primary mb-3" aria-hidden="true"></i>
+                        <h5>Gaussian Splatting API</h5>
+                        <p>Integrate 3D scene generation into your applications with our RESTful API for enterprise users.</p>
+                    </div>
+                </div>
+                <h4 class="mt-5 mb-5">Example Applications</h4>
+                <div class="row gx-4 gx-lg-5 justify-content-center">
+                    <div class="col-md-3 text-center mb-4">
+                        <i class="fas fa-home fa-2x text-primary mb-2"></i>
+                        <p class="mb-0">Real Estate</p>
+                    </div>
+                    <div class="col-md-3 text-center mb-4">
+                        <i class="fas fa-landmark fa-2x text-primary mb-2"></i>
+                        <p class="mb-0">Historical Preservation</p>
+                    </div>
+                    <div class="col-md-3 text-center mb-4">
+                        <i class="fas fa-book-open fa-2x text-primary mb-2"></i>
+                        <p class="mb-0">Education</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <i class="fas fa-laptop-code fa-2x text-primary mb-2"></i>
+                        <p class="mb-0">Developer Tools</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <!-- Embedding 3D Viewer Section -->
+        <section class="projects-section text-center bg-light" id="embed">
+            <div class="container px-4 px-lg-5">
+                <h2 class="mb-4">Embed Our 3D Viewer directly into Your Website</h2>
+                <p class="mb-4">
+                    The vid2scene 3D viewer can be embedded into any website using an iframe. With this, you can showcase your immersive 3D scenes from directly within your own website.
+                </p>
+                <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#exampleSceneModal">
+                    Try an Embedded 3D Scene
+                </button>
+
+                <!-- Modal -->
+                <div class="modal fade" id="exampleSceneModal" tabindex="-1" aria-labelledby="exampleSceneModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="exampleSceneModalLabel">Embedded Viewer</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <iframe
+                                    id="exampleSceneIframe"
+                                    data-src="{% if debug %}http://localhost:8000/viewer/b67a4bfe-28e0-4434-b77e-ea564be65510{% else %}{{ site_url }}/viewer/2410f60b-5c7a-4e41-9640-532d6a357866{% endif %}" 
+                                    width="100%" 
+                                    height="600" 
+                                    frameborder="0"
+                                    >
+                                </iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- API Documentation Section -->
+        <section class="projects-section text-center" id="api">
+            <div class="container px-4 px-lg-5">
+                <h2 class="mb-4">Gaussian Splatting API</h2>
+                <p class="mb-4 lead">
+                    Integrate vid2scene's 3D Gaussian Splatting capabilities directly into your applications with our comprehensive REST API. Perfect for enterprise users and developers who need programmatic access to transform videos into photorealistic 3D scenes.
+                </p>
+                <div class="row gx-4 gx-lg-5 justify-content-center mb-4">
+                    <div class="col-md-4 text-center mb-4">
+                        <i class="fas fa-code fa-2x text-primary mb-3"></i>
+                        <h5>RESTful Gaussian Splatting API</h5>
+                        <p>Complete REST API with comprehensive documentation, code examples, and OpenAPI specification for 3D Gaussian Splatting scene generation.</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-4">
+                        <i class="fas fa-key fa-2x text-primary mb-3"></i>
+                        <h5>API Key Authentication</h5>
+                        <p>Secure authentication with API keys for enterprise-level access. No rate limits for Enterprise subscribers.</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-4">
+                        <i class="fas fa-download fa-2x text-primary mb-3"></i>
+                        <h5>Multiple Output Formats</h5>
+                        <p>Download Gaussian Splatting results in various formats including PLY and SPZ files for integration with your 3D pipelines.</p>
+                    </div>
+                </div>
+                <div class="row gx-4 gx-lg-5 justify-content-center mb-4">
+                    <div class="col-md-6 text-center mb-4">
+                        <i class="fas fa-rocket fa-2x text-primary mb-3"></i>
+                        <h5>Programmatic Job Management</h5>
+                        <p>Submit videos, track processing status, download results, and manage your Gaussian Splatting jobs programmatically.</p>
+                    </div>
+                    <div class="col-md-6 text-center mb-4">
+                        <i class="fas fa-cogs fa-2x text-primary mb-3"></i>
+                        <h5>Customizable Parameters</h5>
+                        <p>Control Gaussian Splatting training parameters including max Gaussians, training steps, and reconstruction methods via API.</p>
+                    </div>
+                </div>
+            
+                
+                <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                    <a href="{% url 'api_docs' %}#getting-started" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play me-2"></i>Get Started with API
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- FAQ Section -->
+        <section class="projects-section text-center" id="faq">
+            <div class="container px-4 px-lg-5">
+                <h2 class="mb-4">Frequently Asked Questions</h2>
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                How does it work?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                Take a 2-3 minute video walking through a space with your phone. Our platform processes this video to create a fully explorable 3D environment. Unlike fixed-position 360° cameras, you can freely move through the space from any angle.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                What does a video capture look like?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                <a href="{% url 'example_recording' %}">See an example video recording here</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header " id="headingThree">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                Is AI used?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                Yes. AI is used to help track objects between frames, but everything you see comes from your original recording. AI is not used to generate any extra objects or information that wasn't captured in the video recording.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                What happens to areas I don't record?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                The platform can only reconstruct areas that were captured in your video. If a space wasn't recorded, it won't appear in the 3D environment. That's why we recommend a thorough walkthrough that covers all areas you want to showcase.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingFive">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                How do I navigate the 3D space?
+                            </button>
+                        </h2>
+                        <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                Unlike traditional virtual tours with fixed viewpoints, with vid2scene, you can freely explore the space. Both first-person and third-person controls are available. On desktop, use your mouse to look around and click to move. On mobile, use intuitive touch controls to navigate the scene.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingSix">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                                How long does the process take?
+                            </button>
+                        </h2>
+                        <div id="collapseSix" class="accordion-collapse collapse" aria-labelledby="headingSix" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                Recording takes 2-3 minutes for a typical room or outdoor area. Processing takes about an hour and a half to generate the 3D environment. This is significantly faster than traditional solutions that require setting up equipment at multiple positions.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingSeven">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven" aria-expanded="false" aria-controls="collapseSeven">
+                                What makes this different from other virtual tour solutions?
+                            </button>
+                        </h2>
+                        <div id="collapseSeven" class="accordion-collapse collapse" aria-labelledby="headingSeven" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <ul class="text-start fs-5">
+                                    <li>No expensive camera equipment needed - just use your phone</li>
+                                    <li>Single continuous video capture instead of multiple setup positions</li>
+                                    <li>Free camera movement rather than fixed viewpoints</li>
+                                    <li>Works well for outdoor spaces like backyards and waterfront views</li>
+                                    <li>Significantly faster capture time</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingEight">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEight" aria-expanded="false" aria-controls="collapseEight">
+                                Is this really free online Gaussian Splatting?
+                            </button>
+                        </h2>
+                        <div id="collapseEight" class="accordion-collapse collapse" aria-labelledby="headingEight" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                Yes! Our free online Gaussian Splatting platform is completely free to use. You can upload videos, process them into 3D scenes, and explore the results without any cost. We believe in making advanced 3D reconstruction technology accessible to everyone. There is a Pro subscription available for those who want higher quality and priority processing.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingNine">
+                            <button class="accordion-button collapsed fs-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNine" aria-expanded="false" aria-controls="collapseNine">
+                                Is there a Gaussian Splatting API available?
+                            </button>
+                        </h2>
+                        <div id="collapseNine" class="accordion-collapse collapse" aria-labelledby="headingNine" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body fs-5">
+                                Yes! We offer a comprehensive RESTful Gaussian Splatting API for Enterprise subscribers. The API allows you to programmatically submit videos, track processing status, download results in PLY and SPZ formats, and manage your 3D scene generation jobs. The API supports customizable parameters including max Gaussians, training steps, and reconstruction methods. <a href="{% url 'api_docs' %}">View our API documentation</a> for complete details, code examples, and authentication instructions.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Get Started CTA-->
+        <div class="masttail"> 
+            <section class="cta-section text-center py-5">
+                <div class="container px-4 px-lg-5">
+                    <h2 class="mb-4 text-light">Ready to Transform Your Videos?</h2>
+                    <a href="{% url 'upload_page' %}" class="btn create_button text-white btn-lg">Create Your 3D Scene</a>
+                </div>
+            </section>
+            
+            <!-- Footer-->
+            <footer class="footer text-white bg-black py-4" id="contact">
+                <div class="container card text-white bg-black mb-3 text-center border-0" style="max-width: 20rem;">
+                    <h1 class="card-header">vid2scene</h1>
+                    <div class="card-body">
+                      <p class="card-text">vid2scene is open-source software.</p>
+                      <p class="card-text"><a href="https://github.com/samuelm2/vid2scene" target="_blank" rel="noopener noreferrer" class="text-white"><i class="bi bi-github"></i> github.com/samuelm2/vid2scene</a></p>
+                      <p class="card-text"><a href="https://discord.gg/W8rEufM2Dz" target="_blank" rel="noopener noreferrer" class="text-white" style="font-size: 1.5rem;"><i class="bi bi-discord"></i></a></p>
+                    </div>
+                  </div>
+                <div class="container text-center mt-3">
+                    <p><a class="text-white" href="{% url 'privacy_policy' %}">Privacy Policy</a> | <a class="text-white" href="{% url 'terms_of_service' %}">Terms of Use</a></p>
+                </div>
+            </footer>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Get the modal element by its ID
+                var exampleSceneModal = document.getElementById('exampleSceneModal');
+                // Get the iframe element by its ID
+                var exampleSceneIframe = document.getElementById('exampleSceneIframe');
+        
+                // Event listener for when the modal is shown
+                exampleSceneModal.addEventListener('shown.bs.modal', function () {
+                    // Set the iframe src from data-src attribute if not already set
+                    if (!exampleSceneIframe.getAttribute('src')) {
+                        // Set the iframe src from data-src attribute
+                        exampleSceneIframe.setAttribute('src', exampleSceneIframe.getAttribute('data-src'));
+                    }
+                });
+            });
+        </script>
+
+    </body>
+</html>
+{% endblock %}

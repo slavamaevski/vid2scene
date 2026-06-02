@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load tz %}
+
+{% block title %}vid2scene - Job Status{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">My Scenes</h1>
+    
+    {% if user.is_superuser and daily_completed_jobs is not None %}
+    <div class="alert alert-info" role="alert">
+        <strong>Daily Completed Jobs:</strong> {{ daily_completed_jobs }} jobs completed today from non-admin users
+    </div>
+    {% endif %}
+    
+    <div class="table-responsive" style="max-width: 100%;">
+        <table class="table table-striped align-middle" style="table-layout: fixed;">
+            <thead class="table-dark text-center align-middle">
+                <tr>
+                    <th class="text-center">Title</th>
+                    <th class="text-center">Actions</th>
+                    <th class="text-center">Uploaded At</th>
+                </tr>
+            </thead>
+            <tbody style="max-width: 33%;">
+                {% for job in jobs %}
+                <tr>
+                    <td class="text-center" style="white-space: normal !important; word-wrap: break-word;">{{ job.title }}</td>
+                    <td class="text-center" style="white-space: normal !important; word-wrap: break-word;">
+                        <a href="{% url 'check_status' job.id %}">View Full Info</a>
+                        {% if job.ply_file or job.spz_file or job.sog_file or job.lod_file %}
+                        | <a href="{% url 'splat_viewer_spj_id' job.id %}">View Scene</a>
+                        {% endif %}
+                    </td>
+                    <td class="text-center" style="white-space: normal !important; word-wrap: break-word;">
+                        <span class="utc-time" data-utc="{{ job.uploaded_at|utc|date:'c' }}">{{ job.uploaded_at }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.utc-time').forEach(element => {
+                const utcTime = element.getAttribute('data-utc');
+                const localTime = new Date(utcTime);
+                
+                // Format with long date/time style that adapts to user's locale
+                const formattedTime = localTime.toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                }).replace(' at ', ', ');
+                
+                element.textContent = formattedTime;
+            });
+        });
+    </script>
+{% endblock %}

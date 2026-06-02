@@ -1,0 +1,37 @@
+Steps for getting it working on AWS:
+ - VM size: g4dn.xlarge
+ - AMI Name: Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 22.04) 20250110
+ - Storage: Add 200GiB volume (not sure if necessary)
+ - Setup swap file in instance storage (see AWS docs)
+sudo dd if=/dev/zero of=/opt/dlami/nvme/swapfile bs=1MB count=32768
+sudo chmod 600 /opt/dlami/nvme/swapfile
+sudo mkswap /opt/dlami/nvme/swapfile
+sudo swapon /opt/dlami/nvme/swapfile
+sudo swapon -s
+sudo vim /etc/fstab
+ Add the following line:
+ /opt/dlami/nvme/swapfile swap swap defaults 0 0
+ - Generate ssh keypair (see github docs):
+ ssh-keygen -t ed25519 -C "YOUR EMAIL HERE"
+ - Add keypair to GitHub
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+cat ~/.ssh/id_ed25519.pub
+ Follow steps here:
+ https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
+ - Git clone recursive submodules vid2scene:
+
+ --
+    git submodule init
+    # Loop through each submodule and attempt to update it
+    git config --file .gitmodules --get-regexp path | while read -r line; do
+        submodule_path=$(echo "$line" | awk '{print $2}')
+        echo "Attempting to update submodule: $submodule_path"
+        git submodule update --init --recursive "$submodule_path" || echo "Failed to update $submodule_path, continuing..."
+    done
+--
+ - Add IP to Azure Redis + Azure Postgres firewall
+ - Copy .env file over to vid2scene_server
+ - Start docker:
+docker compose -f docker-compose.yaml up --build
+ - verify on vid2scene admin page that worker is connected

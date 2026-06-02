@@ -1,0 +1,30 @@
+{% load i18n %}
+{% load allauth %}
+{% load socialaccount %}
+{% get_providers as socialaccount_providers %}
+{% if socialaccount_providers %}
+    {% if not SOCIALACCOUNT_ONLY %}
+        {% element hr %}
+        {% endelement %}
+        {% element h2 %}
+            {% translate "Or use a third-party" %}
+        {% endelement %}
+    {% endif %}
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+        data-client_id="{{ GOOGLE_CLIENT_ID }}"
+        data-context="signup"
+        data-ux_mode="redirect"
+        data-login_uri="{{ request.scheme }}://{% if request.get_host == '127.0.0.1:8000' or request.get_host == '127.0.0.1' %}localhost{% else %}{{ request.get_host }}{% endif %}{% url 'google_login_by_token' %}"
+        data-auto_prompt="false">
+    </div>
+
+    <div class="g_id_signin"
+        data-type="standard"
+        data-shape="rectangular"
+        data-theme="filled_black"
+        data-text="signin_with"
+        data-size="large"
+        data-logo_alignment="left">
+    </div>
+{% endif %}

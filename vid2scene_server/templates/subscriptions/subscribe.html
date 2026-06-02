@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if user.is_authenticated %}{% if is_enterprise_user %}Your Enterprise Subscription{% elif is_pro_user %}Your Pro Subscription{% else %}Choose Your Plan{% endif %}{% else %}vid2scene Plans{% endif %} - vid2scene{% endblock %}
+
+{% block content %}
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+<div class="container py-md-5 pt-md-2 pt-0 pb-3">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-sm-12 px-md-3 px-1">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white py-3">
+                    <h2 class="card-title mb-0 text-center">
+                        {% if user.is_authenticated %}
+                            {% if is_enterprise_user %}
+                                You're Enterprise!
+                            {% elif is_pro_user %}
+                                You're a Pro!
+                            {% else %}
+                                Subscription Options
+                            {% endif %}
+                        {% else %}
+                            Subscription Options
+                        {% endif %}
+                    </h2>
+                </div>
+                
+                <div class="card-body p-md-5 p-3">
+                    <div class="text-center mb-2 mb-md-4">
+                        <span class="display-4">
+                            {% if is_enterprise_user %}
+                            <i class="fas fa-check-circle text-success"></i>
+                            {% elif is_pro_user %}
+                            <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                            <i class="fas fa-crown text-warning"></i>
+                            {% endif %}
+                        </span>
+                        <h3 class="mt-3">
+                            {% if user.is_authenticated %}
+                                {% if is_enterprise_user %}You're Enterprise!{% elif is_pro_user %}You're a Pro!{% else %}Choose Your Plan{% endif %}
+                            {% else %}
+                                Professional Features for Creators
+                            {% endif %}
+                        </h3>
+                        <p class="lead text-muted mb-0">Take your video-to-scene conversions to the next level</p>
+                    </div>
+                    
+                    <!-- Pricing Cards -->
+                    <div class="row g-4 mb-4">
+                        <!-- Pro Plan -->
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100 {% if is_pro_user %}border-primary{% endif %}" {% if is_pro_user %}style="border: 2px solid var(--bs-primary) !important;"{% endif %}>
+                                <div class="card-header pro-gradient-static text-white text-center py-3">
+                                    <h4 class="card-title mb-1 fw-bold">Pro</h4>
+                                    <p class="mb-0 small opacity-90">Perfect for creators and professionals</p>
+                                </div>
+                                <div class="card-body p-md-4 p-3 d-flex flex-column">
+                                    <div class="text-center mb-4">
+                                        <div class="pricing-block">
+                                            <div class="h2 fw-bold mb-0">$4.99</div>
+                                            <div class="text-muted">per month</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-center mt-auto">
+                                        {% if user.is_authenticated %}
+                                            {% if is_pro_user %}
+                                            <button class="btn btn-secondary w-100" disabled style="border: none;">
+                                                <i class="fas fa-check me-2"></i>Current Plan
+                                            </button>
+                                            {% elif is_enterprise_user %}
+                                            <button class="btn btn-secondary w-100" disabled style="border: none;">
+                                                <i class="fas fa-check me-2"></i>Included in Enterprise
+                                            </button>
+                                            {% else %}
+                                            <form action="{% url 'create-checkout-session' %}" method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="price_lookup_key" value="standard_monthly_vid2scene_pro" />
+                                                <button type="submit" class="btn pro-gradient-dynamic text-white w-100">
+                                                    <i class="fas fa-gem me-2"></i>Subscribe to Pro
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        {% else %}
+                                            <a href="{% url 'account_login' %}?next={% url 'subscribe' %}" class="btn pro-gradient-dynamic text-white w-100">
+                                                <i class="fas fa-sign-in-alt me-2"></i>Sign in to Subscribe
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Enterprise Plan -->
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100 enterprise-card" {% if is_enterprise_user %}style="border: 3px solid #2e8b57 !important;"{% endif %}>
+                                <div class="card-header text-white text-center py-3 enterprise-header">
+                                    <h4 class="card-title mb-1 fw-bold">Enterprise</h4>
+                                    <p class="mb-0 small opacity-90">For teams and organizations</p>
+                                </div>
+                                <div class="card-body p-md-4 p-3 d-flex flex-column enterprise-card-body">
+                                    <div class="text-center mb-4">
+                                        <div class="pricing-block">
+                                            <div class="h2 fw-bold mb-0 text-enterprise">Custom</div>
+                                            <div class="text-muted">pricing</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-center mt-auto">
+                                        {% if user.is_authenticated and is_enterprise_user %}
+                                            <a href="{% url 'profile' %}" class="btn enterprise-btn-outline w-100">
+                                                <i class="fas fa-cog me-2"></i>Manage Plan
+                                            </a>
+                                        {% else %}
+                                            <a href="mailto:{{ contact_email }}?subject=Enterprise%20Inquiry" class="btn text-white w-100 contact-sales-btn">
+                                                <i class="fas fa-envelope me-2"></i>Contact Sales
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature Comparison Table -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 text-center fw-bold">Feature Comparison</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 comparison-table">
+                                    <thead>
+                                        <tr class="border-bottom">
+                                            <th class="ps-md-4 ps-3 py-3 border-0" style="width: 50%;">Feature</th>
+                                            <th class="text-center py-3 border-0 pro-gradient-static text-white" style="width: 25%;">
+                                                <span class="fw-bold">Pro</span>
+                                            </th>
+                                            <th class="text-center py-3 border-0 enterprise-header-bg text-white" style="width: 25%;">
+                                                <span class="fw-bold">Enterprise</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>Higher training quality</strong>
+                                                <div class="text-muted small">Better model training for improved results</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>Larger video file uploads</strong>
+                                                <div class="text-muted small">Upload bigger video files for processing</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>Priority scene processing</strong>
+                                                <div class="text-muted small">Faster processing queue for your jobs</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <span class="badge bg-primary px-3 py-2">Priority</span>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <span class="badge px-3 py-2" style="background: #2e8b57;">Highest Priority</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>API access</strong>
+                                                <div class="text-muted small">Programmatic access to vid2scene</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-times text-muted"></i>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>White-labeling & branding</strong>
+                                                <div class="text-muted small">Customize with your own branding</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-times text-muted"></i>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>AprilTag support</strong>
+                                                <div class="text-muted small">Real-world scaling calibration for robotics</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-times text-muted"></i>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-md-4 ps-3 py-3">
+                                                <strong>Dedicated support</strong>
+                                                <div class="text-muted small">Priority support from our team</div>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-times text-muted"></i>
+                                            </td>
+                                            <td class="text-center py-3">
+                                                <i class="fas fa-check text-success fa-lg"></i>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if user.is_authenticated %}
+                    <div class="alert alert-light border text-center py-md-3 py-2 px-md-3 px-2 my-md-3 my-2">
+                        <small class="text-muted">
+                            Logged in as <strong>{{ request.user.email }}</strong>. 
+                            Your subscription {% if is_enterprise_user or is_pro_user %}is{% else %}will be{% endif %} associated with this account.
+                        </small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info border text-center py-md-3 py-2 px-md-3 px-2 my-md-3 my-2">
+                        <small>
+                            <i class="fas fa-info-circle me-2"></i>
+                            Sign in to your account to subscribe to a plan or contact sales for Enterprise options.
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer bg-white border-top p-3 text-center">
+                    <small class="text-muted">
+                        Secure payment processing by <i class="fab fa-stripe text-primary fa-2x align-center" style="position: relative; top: 0.20em;"></i>.
+                        By subscribing, you agree to our <a href="{% url 'terms_of_service' %}">Terms of Use</a>.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.contact-sales-btn {
+    background: #2e8b57 !important;
+    border: none !important;
+    transition: filter 0.3s ease;
+}
+
+.contact-sales-btn:hover {
+    filter: brightness(1.15);
+}
+
+.pro-gradient-dynamic {
+    transition: filter 0.3s ease;
+}
+
+.pro-gradient-dynamic:hover {
+    filter: brightness(1.15);
+}
+
+/* Enterprise Card Styling */
+.enterprise-card {
+    border: 2px solid rgba(46, 139, 87, 0.3) !important;
+    transition: all 0.3s ease;
+}
+
+.enterprise-card:hover {
+    border-color: #2e8b57 !important;
+    box-shadow: 0 0.5rem 1rem rgba(46, 139, 87, 0.15) !important;
+}
+
+.enterprise-header {
+    background: linear-gradient(135deg, #2e8b57 0%, #3ba368 100%) !important;
+}
+
+.enterprise-card-body {
+    background: linear-gradient(180deg, rgba(46, 139, 87, 0.02) 0%, rgba(255, 255, 255, 1) 100%);
+}
+
+.text-enterprise {
+    color: #2e8b57;
+}
+
+.enterprise-btn-outline {
+    border: 2px solid #2e8b57;
+    color: #2e8b57;
+    transition: all 0.3s ease;
+}
+
+.enterprise-btn-outline:hover {
+    background: #2e8b57;
+    color: white;
+}
+
+/* Feature Comparison Table Styles */
+.comparison-table {
+    border: 1px solid #dee2e6;
+}
+
+.comparison-table thead th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6 !important;
+    vertical-align: middle;
+}
+
+.comparison-table tbody td {
+    border: 1px solid #dee2e6 !important;
+    vertical-align: middle;
+}
+
+.comparison-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.comparison-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.comparison-table tbody tr.table-active {
+    background-color: #f0f7ff;
+}
+
+.comparison-table tbody tr.table-active:hover {
+    background-color: #e6f2ff;
+}
+
+/* Center align icons and badges */
+.comparison-table td:nth-child(2),
+.comparison-table td:nth-child(3),
+.comparison-table th:nth-child(2),
+.comparison-table th:nth-child(3) {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.enterprise-header-bg {
+    background: linear-gradient(135deg, #2e8b57 0%, #3ba368 100%);
+}
+
+/* Mobile responsiveness for table */
+@media (max-width: 768px) {
+    .comparison-table {
+        font-size: 0.85rem;
+    }
+    
+    .comparison-table thead th {
+        padding: 0.875rem 0.5rem !important;
+        font-size: 0.8rem;
+    }
+    
+    .comparison-table tbody td {
+        padding: 1rem 0.5rem !important;
+    }
+    
+    .comparison-table tbody td:first-child {
+        padding-left: 1rem !important;
+    }
+    
+    .comparison-table td .small {
+        font-size: 0.7rem;
+        line-height: 1.3;
+        margin-top: 0.25rem;
+    }
+    
+    .comparison-table td strong {
+        font-size: 0.85rem;
+    }
+    
+    /* Adjust icon sizes on mobile */
+    .comparison-table .fa-check,
+    .comparison-table .fa-times {
+        font-size: 1rem !important;
+    }
+    
+    /* Make badges smaller on mobile */
+    .comparison-table .badge {
+        font-size: 0.7rem !important;
+        padding: 0.375rem 0.5rem !important;
+    }
+}
+</style>
+
+{% endblock %}

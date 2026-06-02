@@ -1,0 +1,33 @@
+[submodule "gsplat"]
+	path = gsplat
+	url = https://github.com/samuelm2/gsplat
+[submodule "Hierarchical-Localization"]
+	path = Hierarchical-Localization
+	url = https://github.com/samusynthorg/Hierarchical-Localization
+[submodule "spz"]
+	path = spz
+	url = https://github.com/samusynth/spz
+[submodule "glomap"]
+	path = glomap
+	url = https://github.com/colmap/glomap.git
+[submodule "vid2scene_server/svraster_webgl_demo/svraster-webgl"]
+	path = vid2scene_server/svraster_webgl_demo/svraster-webgl
+	url = https://github.com/samuelm2/svraster-webgl.git
+[submodule "vggt"]
+	path = vggt
+	url = https://github.com/samusynthorg/vggt.git
+[submodule "quest-3d-reconstruction"]
+	path = quest-3d-reconstruction
+	url = https://github.com/samuelm2/quest-3d-reconstruction.git
+[submodule "sam3"]
+	path = sam3
+	url = https://github.com/facebookresearch/sam3
+[submodule "ply-to-sog"]
+	path = ply-to-sog
+	url = https://github.com/samuelm2/ply-to-sog
+[submodule "3dgs-autolod"]
+	path = 3dgs-autolod
+	url = https://github.com/samuelm2/3dgs-autolod.git
+[submodule "vid2scene_core/simpleomp"]
+	path = vid2scene_core/simpleomp
+	url = https://github.com/MuTsunTsai/simpleomp.git

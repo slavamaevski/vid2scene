@@ -1,0 +1,329 @@
+"""
+Core job creation and upload functionality for vid2scene.
+
+This module contains the shared logic for:
+- Generating Azure blob storage SAS URLs for video uploads
+- Creating and enqueueing scene processing jobs
+- Handling differences between web API and dev API workflows
+"""
+
+import datetime
+import re
+import logging
+import django_rq
+from django.conf import settings
+from django.core.mail import send_mail
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
+
+from .models import SceneProcessingJob
+from .utils import validate_user_settings
+from subscriptions.utils import get_subscription_tier_string, user_can_generate_premium_scene
+from subscriptions.models import SubscriptionTier, CreditTransaction
+
+logger = logging.getLogger(__name__)
+
+
+def validate_blob(blob_name, max_age_minutes=60, max_size_bytes=None):
+    """
+    Check if blob was created within the last N minutes and is under the size limit.
+    Returns (True, None) if valid, (False, error_message) if invalid.
+    Uses UTC timestamps so daylight savings doesn't affect it.
+    """
+    try:
+        from datetime import timedelta, timezone
+        
+        blob_service_client = BlobServiceClient.from_connection_string(
+            settings.STORAGES["default"]["OPTIONS"]["connection_string"]
+        )
+        container_name = settings.STORAGES["default"]["OPTIONS"]["azure_container"]
+        
+        blob_client = blob_service_client.get_blob_client(
+            container=container_name, 
+            blob=blob_name
+        )
+        
+        # Get blob properties
+        blob_properties = blob_client.get_blob_properties()
+        creation_time = blob_properties.creation_time
+        blob_size = blob_properties.size
+        
+        # Check size (if max_size_bytes is provided)
+        if max_size_bytes and blob_size > max_size_bytes:
+            return False, f"File size ({blob_size / (1024**3):.2f} GB) exceeds the maximum allowed limit ({max_size_bytes / (1024**3):.2f} GB)."
+        
+        # Check age (both timestamps are in UTC)
+        current_time = datetime.datetime.now(timezone.utc)
+        age = current_time - creation_time
+        
+        if age > timedelta(minutes=max_age_minutes):
+            return False, 'Blob too old. Please upload a new video.'
+            
+        return True, None
+        
+    except Exception:
+        # Blob doesn't exist or other error - fail closed
+        return False, 'Blob not found. Please verify the upload.'
+
+
+def create_upload_sas_url(file_extension):
+    """
+    Core logic for generating upload SAS URL.
+    Returns dict with sas_url and blob_name, or raises an exception.
+    """
+    blob_name = f"videos/{SceneProcessingJob.generate_uuid()}.{file_extension}" if hasattr(SceneProcessingJob, 'generate_uuid') else None
+    if not blob_name:
+        import uuid
+        blob_name = f"videos/{uuid.uuid4()}.{file_extension}"
+
+    blob_service_client = BlobServiceClient.from_connection_string(
+        settings.STORAGES["default"]["OPTIONS"]["connection_string"]
+    )
+    container_name = settings.STORAGES["default"]["OPTIONS"]["azure_container"]
+
+    sas_token = generate_blob_sas(
+        account_name=blob_service_client.account_name,
+        container_name=container_name,
+        blob_name=blob_name,
+        account_key=blob_service_client.credential.account_key,
+        permission=BlobSasPermissions(write=True, create=True),
+        expiry=datetime.datetime.utcnow() + datetime.timedelta(minutes=120),
+    )
+
+    sas_url = f"{blob_service_client.url}{container_name}/{blob_name}?{sas_token}"
+
+    return {'sas_url': sas_url, 'blob_name': blob_name}
+
+
+def create_processing_job(user, title, blob_name, public=False, allow_as_example=False, 
+                         reconstruction_method=None, training_max_num_gaussians=None, 
+                         training_num_steps=None, remove_background=False,
+                         equirectangular=False, use_background_sphere=False, pilgram_filter=None,
+                         apriltag_size_mm=None, camera_type=None,
+                         is_api_call=False):
+    """
+    Core logic for creating and enqueueing a scene processing job.
+    
+    Args:
+        user: Request user object
+        title: Job title
+        blob_name: Video blob name/path
+        public: Whether job is public
+        allow_as_example: Whether job can be used as example
+        reconstruction_method: Reconstruction method to use
+        training_max_num_gaussians: Max number of gaussians
+        training_num_steps: Number of training steps
+        camera_data: Camera data for the job
+        remove_background: Whether to remove background (web API only)
+        equirectangular: Whether video is equirectangular (web API only)
+        use_background_sphere: Whether to use background sphere (web API only)
+        pilgram_filter: Pilgram filter to apply (web API only)
+    
+    Returns:
+        dict with success status and job details
+    """
+    # Validate blob name format
+    if not blob_name:
+        raise ValueError('No blob_name provided.')
+    
+    if not re.match(r'^videos/[a-f0-9\-]{36}\.[a-z0-9]+$', blob_name):
+        raise ValueError('Invalid blob_name format.')
+    
+    # Set defaults
+    reconstruction_method = reconstruction_method or SceneProcessingJob.ReconstructionMethod.GLOMAP
+    
+    # Calculate max size for this job based on method and subscription tier
+    user_has_premium_access = user_can_generate_premium_scene(user, api=is_api_call) if user else False
+    if reconstruction_method == SceneProcessingJob.ReconstructionMethod.GENERATE_LOD:
+        # 6GB hard limit for LOD PLY uploads
+        max_size_bytes = 6 * 1024 * 1024 * 1024
+    elif reconstruction_method == SceneProcessingJob.ReconstructionMethod.QUEST:
+        # Quest file size limits
+        max_size_bytes = settings.MAX_QUEST_FILE_SIZE_PRO if user_has_premium_access else settings.MAX_QUEST_FILE_SIZE_FREE
+    else:
+        # Standard video limits: 5GB Pro/Enterprise, 2GB Free
+        max_size_bytes = settings.MAX_VIDEO_FILE_SIZE_PRO if user_has_premium_access else settings.MAX_VIDEO_FILE_SIZE_FREE
+
+    # Validate the blob existence, age, and strict size limit
+    is_valid, error_msg = validate_blob(blob_name, max_age_minutes=60, max_size_bytes=max_size_bytes)
+    if not is_valid:
+        raise ValueError(error_msg)
+    
+    # Validate reconstruction method
+    valid_methods = [choice[0] for choice in SceneProcessingJob.ReconstructionMethod.choices]
+    if reconstruction_method not in valid_methods:
+        raise ValueError(f'Invalid reconstruction method. Must be one of: {", ".join(valid_methods)}')
+    
+    # Get user subscription tier for validation
+    user_subscription_tier = get_subscription_tier_string(user)
+    
+    # Handle credit consumption and premium treatment logic FIRST
+    gets_premium_treatment = user_has_premium_access
+    consumption_transaction = None
+    
+    # Special handling for enterprise per-scene users
+    if (user.is_authenticated and hasattr(user, 'subscription') 
+        and user.subscription.tier == SubscriptionTier.ENTERPRISE_PERSCENE):
+        
+        # For API calls: Must have credits or fail completely
+        if is_api_call and user.subscription.api_credits_remaining < 1:
+            raise ValueError('Insufficient API credits to process scene.')
+        
+        # For both web and API calls: If gets_premium_treatment is True, consume one credit
+        if gets_premium_treatment:  # This means they have credits (already checked by user_can_generate_premium_scene)
+            # Create consumption transaction as PENDING (will be fulfilled after job is queued successfully)
+            consumption_transaction = CreditTransaction.objects.create(
+                user=user,
+                transaction_type=CreditTransaction.TransactionType.CONSUMPTION,
+                credits_amount=-1,  # Negative for consumption
+                auto_processed=True,
+                status=CreditTransaction.TransactionStatus.PENDING  # Don't deduct credit yet
+            )
+
+    # NOW validate user settings with subscription tier
+    validation_result = validate_user_settings(
+        user,
+        training_max_num_gaussians=training_max_num_gaussians,
+        training_num_steps=training_num_steps,
+        reconstruction_method=reconstruction_method,
+        apriltag_size_mm=apriltag_size_mm,
+        is_api_call=is_api_call,
+        user_subscription_tier=user_subscription_tier,
+    )
+    
+    if not validation_result['valid']:
+        if validation_result['adjusted_values']:
+            # Apply adjustments
+            training_max_num_gaussians = validation_result['adjusted_values'].get('training_max_num_gaussians', training_max_num_gaussians)
+            training_num_steps = validation_result['adjusted_values'].get('training_num_steps', training_num_steps)
+            reconstruction_method = validation_result['adjusted_values'].get('reconstruction_method', reconstruction_method)
+            apriltag_size_mm = validation_result['adjusted_values'].get('apriltag_size_mm', apriltag_size_mm)
+        else:
+            raise ValueError('; '.join(validation_result['errors']))
+    
+    # Create job with appropriate field name
+    job_data = {
+        'title': title or blob_name.split('/')[-1],
+        'public': public,
+        'allow_as_example': allow_as_example,
+        'user': user if user.is_authenticated else None,
+        'reconstruction_method': reconstruction_method,
+        'training_max_num_gaussians': training_max_num_gaussians or SceneProcessingJob.DEFAULT_NUM_GAUSSIANS,
+        'training_num_steps': training_num_steps or SceneProcessingJob.DEFAULT_NUM_STEPS,
+    }
+    
+
+    # Web API uses video_file field and supports additional features
+    job_data['video_file'] = blob_name
+    job_data['remove_background'] = remove_background
+    job_data['equirectangular'] = equirectangular
+    job_data['use_background_sphere'] = use_background_sphere
+    if pilgram_filter:
+        job_data['pilgram_filter'] = pilgram_filter
+    
+    # AprilTag calibration (Enterprise only)
+    if apriltag_size_mm is not None:
+        job_data['apriltag_size_mm'] = apriltag_size_mm
+    
+    # Set initial camera_data with camera_type preference if provided
+    if camera_type:
+        job_data['camera_data'] = {
+            "lookAt": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "position": {"x": 0.0, "y": 0.0, "z": -3.0},
+            "up": {"x": 0.0, "y": 1.0, "z": 0.0},
+            "cameraType": camera_type
+        }
+
+    spj = SceneProcessingJob.objects.create(**job_data)
+
+    # Link consumption transaction to the created job if applicable
+    if consumption_transaction:
+        consumption_transaction.scene_processing_job = spj
+        consumption_transaction.job_title = spj.title[:255] if spj.title else ""  # Truncate safely
+        consumption_transaction.job_created_at = spj.uploaded_at
+        consumption_transaction.save()
+
+    # Assign queue based on premium treatment
+    queue_name = "default"
+    if user.is_authenticated and user.is_superuser:
+        queue_name = "internal"
+    elif (user.is_authenticated and hasattr(user, 'subscription') 
+          and user.subscription is not None
+          and user.subscription.tier in [SubscriptionTier.ENTERPRISE, SubscriptionTier.ENTERPRISE_PERSCENE]):
+        queue_name = "enterprise"
+    elif gets_premium_treatment:
+        queue_name = "high"
+    queue = django_rq.get_queue(queue_name)
+
+    
+    # Enqueue job
+    # Enqueue job safely using transaction.on_commit
+    from django.db import transaction
+    from rq.job import Job
+
+    # 1. Pre-create the Job object (this generates the job.id without queuing it yet)
+    job = Job.create(
+        func="video_processor.tasks.process_video_task",
+        args=(spj.id,),
+        connection=queue.connection
+    )
+    
+    # 2. Save the pre-generated ID to our database model right now
+    spj.rq_job_id = job.id
+    spj.save()
+
+    def enqueue_precreated_job():
+        # 3. Actually push it to Redis *after* the DB commits
+        queue.enqueue_job(job)
+        
+        # 4. Fulfill credits now that it's safely queued
+        if consumption_transaction:
+            success = consumption_transaction.fulfill(admin_notes="Automatic consumption - job successfully queued")
+            if not success:
+                logger.error(f"Failed to fulfill credit transaction {consumption_transaction.id} for job {spj.id}")
+                
+    transaction.on_commit(enqueue_precreated_job)
+    
+    # Send notification email
+    try:
+        user_info = f"User: {user.username}" if user.is_authenticated else "User: Anonymous"
+        queue_info = f"Queue: {queue_name}"
+        
+        
+        from django.urls import reverse
+        redirect_url = reverse("check_status", kwargs={'spj_id': spj.id})
+        email_body = f"""
+A new video processing job has been enqueued.
+
+Job Details:
+- Job ID: {spj.id}
+- Title: {title}
+- {user_info}
+- {queue_info}
+- Public: {public}
+- Max Gaussians: {spj.training_max_num_gaussians}
+- Training Steps: {spj.training_num_steps}
+- Remove Background: {remove_background}
+- Equirectangular: {equirectangular}
+- Reconstruction Method: {reconstruction_method}
+- RQ Job ID: {job.id}
+
+Status URL: {redirect_url}
+""".strip()
+        subject = 'New Video Processing Job Enqueued'
+        
+        send_mail(
+            subject=subject,
+            message=email_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[settings.STATUS_EMAIL],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+    
+    return {
+        'spj': spj,
+        'job': job,
+        'queue_name': queue_name
+    }
+

@@ -1,0 +1,131 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+# Install base utilities
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        wget \
+        git \
+        ffmpeg \
+        clang \
+        libomp-dev \
+        cmake \
+        ninja-build \
+        libboost-program-options-dev \
+        libboost-graph-dev \
+        libboost-system-dev \
+        libeigen3-dev \
+        libflann-dev \
+        libfreeimage-dev \
+        libmetis-dev \
+        libgoogle-glog-dev \
+        libgtest-dev \
+        libgmock-dev \
+        libsqlite3-dev \
+        libglew-dev \
+        qtbase5-dev \
+        libqt5opengl5-dev \
+        libcgal-dev \
+        libceres-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install ply-to-sog dependencies (libwebp-dev, pkg-config)
+# libeigen3-dev and libomp-dev are already in the base packages list above
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libwebp-dev \
+    pkg-config && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
+
+# Install cmake version 3.31
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-x86_64.sh && \
+    chmod +x cmake-3.31.0-linux-x86_64.sh && \
+    ./cmake-3.31.0-linux-x86_64.sh --skip-license --prefix=/usr/local && \
+    rm cmake-3.31.0-linux-x86_64.sh
+
+# Install glomap
+ENV CONDA_DIR=/opt/conda
+COPY glomap /app/glomap
+WORKDIR /app/glomap
+RUN mkdir build && \
+    cd build && \
+    cmake .. -GNinja && \
+    ninja && \
+    ninja install
+
+# Put conda in path so we can use conda activates
+ENV PATH=$CONDA_DIR/bin:$PATH
+ENV CONDA_OVERRIDE_CUDA="12.4"
+# Set specific CUDA architectures for T4 (7.5), RTX30xx (8.6), and Ada (8.9)
+# Can be overridden at build time: docker build --build-arg TORCH_CUDA_ARCH_LIST="8.6" .
+ARG TORCH_CUDA_ARCH_LIST="7.5;8.6;8.9"
+ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
+
+
+# Make RUN commands use the new environment:
+COPY env_cuda_colmap.yml /app/env_cuda_colmap.yml
+RUN conda env create -f /app/env_cuda_colmap.yml
+RUN echo "conda activate env_cuda_colmap" >> ~/.bashrc
+SHELL ["conda", "run", "-n", "env_cuda_colmap", "/bin/bash", "-c"]
+
+# Copy project files into the container:
+COPY vid2scene_server /app/vid2scene_server
+COPY quest-3d-reconstruction /app/quest-3d-reconstruction
+COPY gsplat /app/gsplat
+COPY Hierarchical-Localization /app/Hierarchical-Localization
+COPY vid2scene_core /app/vid2scene_core
+COPY requirements_worker.txt /app/requirements_worker.txt
+COPY spz /app/spz
+COPY vggt /app/vggt
+COPY sam3 /app/sam3
+COPY ply-to-sog /app/ply-to-sog
+COPY 3dgs-autolod /app/3dgs-autolod
+
+# Build ply-to-sog
+WORKDIR /app/ply-to-sog
+RUN mkdir build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
+
+# Build 3dgs-autolod
+WORKDIR /app/3dgs-autolod
+RUN mkdir build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
+
+WORKDIR /app/spz
+
+ENV CC=clang
+ENV CXX=clang++
+RUN ./build_native.sh
+RUN chmod +x ./build_native/bin/spz_convert
+WORKDIR /app
+
+
+# Add GSPLAT_SCRIPT environment variable:
+ENV GSPLAT_SCRIPT="/app/gsplat/examples/simple_trainer.py"
+
+RUN pip install -r /app/vid2scene_server/requirements.txt && \
+    pip install -r /app/requirements_worker.txt && \
+    pip install -r /app/vggt/requirements.txt && \
+    pip install git+https://github.com/rahul-goel/fused-ssim@328dc9836f513d00c4b5bc38fe30478b4435cbb5 --no-build-isolation --verbose && \
+    pip install git+https://github.com/harry7557558/fused-bilagrid@49f0ef06c9f81810fb9b5dd9027cf1844950cc16 --no-build-isolation --verbose && \
+    pip install -r /app/gsplat/examples/requirements.txt && \
+    pip install pycolmap-cuda12==3.13.0 --no-deps && \
+    pip install -r /app/Hierarchical-Localization/requirements.txt
+
+# Install gsplat from submodule (builds from source for PyTorch 2.5+ compatibility)
+WORKDIR /app/gsplat
+RUN pip install .
+
+# Install SAM3 from submodule
+WORKDIR /app/sam3
+RUN pip install .
+
+WORKDIR /app/Hierarchical-Localization
+RUN pip install .
+
+WORKDIR /app/vid2scene_server
+# The code to run when container is started:
+ENTRYPOINT [ "conda", "run", "-n", "env_cuda_colmap", "/bin/bash", "-c", "python /app/vid2scene_server/manage.py rqworker ${RQ_QUEUES:-internal enterprise high default}" ]

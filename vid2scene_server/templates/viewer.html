@@ -1,0 +1,38 @@
+{% load static %}
+
+{% load django_vite %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% vite_hmr_client %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ spj.title }} - 3D Viewer</title>
+
+    <link rel="shortcut icon" type="image/png" href="{% static 'favicon.ico' %}" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://bootswatch.com/5/lux/bootstrap.min.css">
+
+    {% vite_asset 'static/src/main.ts' crossorigin="anonymous" %}
+    {% if spj.camera_data %}
+    {{ spj.camera_data|json_script:"server_camera_data" }}
+    {% endif %}
+    {% if show_preview %}
+    <meta property="og:image" content="{% url 'preview_image' spj.id %}">
+    {% endif %}
+    {% include "partials/analytics.html" %}
+</head>
+
+<body>
+    <div id="app" data-spj-id="{{ spj.id }}" data-is-owner="{{ is_owner }}" data-title="{{ spj.title }}"
+        data-has-spz-available="{% if spj.spz_file %}true{% else %}false{% endif %}"
+        data-has-sog-available="{% if spj.sog_file %}true{% else %}false{% endif %}"
+        data-has-lod-available="{% if spj.lod_file %}true{% else %}false{% endif %}"
+        data-is-shareable="{{ is_shareable }}"></div>
+</body>
+
+</html>

@@ -1,0 +1,2 @@
+If you are running docker desktop on windows, you need to set the network mode to host.
+   - Settings -> Resources -> Network -> Enable host networking

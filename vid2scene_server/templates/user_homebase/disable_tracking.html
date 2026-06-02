@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>
+    localStorage.setItem('umami.disabled', '1');
+</script>
+<h1>Tracking Disabled</h1>
+<p>Umami tracking has been disabled for this browser.</p>
+{% endblock %}

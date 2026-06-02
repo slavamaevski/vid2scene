@@ -1,0 +1,21 @@
+# .dockerignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.git
+.gitignore
+vid2scene_server/ply_files
+vid2scene_server/videos
+vid2scene_server/collectedstatic
+vid2scene_server.log
+**/node_modules
+**/test_assets
+**/preview_images
+**/SuperGluePretrainedNetwork
+**/r2d2
+**/glomap/build
+**/nerfcapture
+Worker_Dockerfile

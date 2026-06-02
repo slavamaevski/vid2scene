@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}vid2scene - Profile{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+    <h1 class="page-header">Profile</h1>
+    <p class="text-muted"><strong>Username:</strong> {{ user.username }}</p>
+    <p class="text-muted"><strong>Email:</strong> {{ user.email }}</p>
+    {% if billing_enabled %}
+    <p class="text-muted">If you are having issues with a subscription or are an enterprise user and need to manage your subscription, please reach out to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+
+    {% if subscription_tier == "enterprise" %}
+        <div class="mt-4">
+            <h4>Enterprise Subscription</h4>
+            <p><span class="ent-badge ent-gradient">ENT</span> You have an active Enterprise subscription</p>
+        </div>
+    {% elif subscription_tier == "enterprise_perscene" %}
+        <div class="mt-4">
+            <h4>Enterprise Per-Scene Subscription</h4>
+            <p><span class="ent-badge ent-gradient">ENT</span> You have an active Enterprise Per-Scene subscription</p>
+            <div class="alert alert-info">
+                <strong>API Credits Remaining:</strong> {{ user.subscription.api_credits_remaining }}
+                <br><small class="text-muted">Credits are consumed when generating the scenes through the API or web interface. Web interface uses free tier limits when you have 0 credits.</small>
+            </div>
+            
+            <!-- Credit Purchase Section -->
+            <div class="mt-4">
+                <h4 class="mb-3">Purchase Additional Credits</h4>
+                
+                <form method="post" action="{% url 'create-credits-purchase-checkout-session' %}" class="purchase-form">
+                    {% csrf_token %}
+                    <div class="row align-items-end">
+                        <div class="col-md-6">
+                            <label for="package-select" class="form-label">Select Credit Package</label>
+                            <select class="form-select" name="package" id="package-select" required>
+                                <option value="">Choose a package...</option>
+                                <option value="SMALL">10 Credits - $49.99</option>
+                                <option value="MEDIUM">25 Credits - $114.99</option>
+                                <option value="LARGE">50 Credits - $214.99</option>
+                                <option value="BULK">100 Credits - $399.99</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary">
+                                Purchase Credits
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+    {% elif subscription_tier == "pro" %}
+        <div class="mt-4">
+            <h4>Pro Subscription</h4>
+            <p><span class="pro-badge pro-gradient">PRO</span> You have an active Pro subscription</p>
+            <form action="{% url 'direct-to-customer-portal' %}" method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    Manage Subscription
+                </button>
+            </form>
+        </div>
+    {%elif subscription_tier == "free" %}
+        <div class="mt-4">
+            <h4>Subscription</h4>
+            <p>You are using the free version of vid2scene.</p>
+            <a href="{% url 'subscribe' %}" class="btn btn-success">Upgrade to Pro</a>
+        </div>
+    {% endif %}
+    {% endif %}
+
+    {% if subscription_tier == "enterprise" or subscription_tier == "enterprise_perscene" %}
+    <div class="mt-5">
+        <h4>API Keys</h4>
+        <p class="text-muted">Manage your API keys for programmatic access to the vid2scene API. <a href="{% url 'api_docs' %}" target="_blank">View documentation</a></p>
+        
+        <!-- Generate new API key -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Generate New API Key</h5>
+            </div>
+            <div class="card-body">
+                <form id="generate-api-key-form" method="post" action="#">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ form.name.label_tag }}
+                        <div class="d-flex gap-2 align-items-end">
+                            <div style="width: 300px;">
+                                {{ form.name }}
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Generate API Key
+                            </button>
+                        </div>
+                        {% if form.name.help_text %}
+                            <div class="form-text">{{ form.name.help_text }}</div>
+                        {% endif %}
+                        <div id="name-error" class="text-danger" style="display: none;">
+                            <small></small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Display existing API keys -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Your API Keys</h5>
+            </div>
+            <div class="card-body">
+                {% if api_keys %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Prefix</th>
+                                    <th>Created</th>
+                                    <th>Last Used</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for api_key in api_keys %}
+                                <tr>
+                                    <td>{{ api_key.name }}</td>
+                                    <td><code>{{ api_key.prefix }}</code></td>
+                                    <td>{{ api_key.created_at|date:"M j, Y" }}</td>
+                                    <td>
+                                        {% if api_key.last_used %}
+                                            {{ api_key.last_used|date:"M j, Y" }}
+                                        {% else %}
+                                            <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger revoke-key-btn" 
+                                                data-key-id="{{ api_key.id }}"
+                                                data-key-name="{{ api_key.name }}">
+                                            Revoke
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">You haven't generated any API keys yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for displaying new API key -->
+    <div class="modal fade" id="apiKeyModal" tabindex="-1" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="apiKeyModalLabel">New API Key Generated</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Important:</strong> This is the only time you'll see your API key. Make sure to copy it and store it securely.
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-api-key" class="form-label">Your API Key</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="modal-api-key" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="copy-btn">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Usage Example</label>
+                        <div class="bg-light p-3 rounded">
+                            <code id="usage-example">curl -H "Authorization: Api-Key YOUR_API_KEY" {{ request.scheme }}://{{ request.get_host }}/api/v1/jobs/</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle credit purchase form
+            const purchaseForm = document.querySelector('.purchase-form');
+            if (purchaseForm) {
+                purchaseForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    
+                    fetch(this.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.checkout_url;
+                        } else {
+                            alert('Error: ' + (data.error || 'Failed to initiate purchase'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to initiate purchase. Please try again.');
+                    });
+                });
+            }
+            
+            // Handle API key generation form
+            const generateForm = document.getElementById('generate-api-key-form');
+            
+            if (generateForm) {
+                generateForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Generating...';
+                
+                // Clear previous error
+                document.getElementById('name-error').style.display = 'none';
+                
+                fetch('{% url "generate_api_key" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Validate response structure
+                    if (typeof data !== 'object' || data === null) {
+                        throw new Error('Invalid response format');
+                    }
+                     if (data.success) {                         
+                         // Show modal with API key
+                         const apiKeyInput = document.getElementById('modal-api-key');
+                         const usageExample = document.getElementById('usage-example');
+                         
+                                                 if (apiKeyInput && data.api_key) {
+                            apiKeyInput.value = data.api_key;
+                        }
+                        if (usageExample && data.api_key) {
+                            usageExample.textContent = `curl -H "Authorization: Api-Key ${data.api_key}" {{ request.scheme }}://{{ request.get_host }}/api/v1/jobs/`;
+                        }
+                         
+                         const modal = new bootstrap.Modal(document.getElementById('apiKeyModal'));
+                         modal.show();
+                        
+                        // Reset form and refresh page when modal is closed to show new key in table
+                        modal._element.addEventListener('hidden.bs.modal', () => {
+                            // Clear the API key from memory for security
+                            if (apiKeyInput) {
+                                apiKeyInput.value = '';
+                            }
+                            // Use location.reload() instead of href assignment for security
+                            window.location.reload();
+                        }, { once: true }); // Ensure event listener is only added once
+                        
+                        generateForm.reset();
+                    } else {
+                        // Show error
+                        const errorDiv = document.getElementById('name-error');
+                        errorDiv.querySelector('small').textContent = data.error;
+                        errorDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    const errorDiv = document.getElementById('name-error');
+                    errorDiv.querySelector('small').textContent = 'Network error occurred. Please check your connection and try again.';
+                    errorDiv.style.display = 'block';
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                });
+            });
+            }
+                         
+            // Copy to clipboard functionality
+            document.getElementById('copy-btn').addEventListener('click', function() {
+                const apiKeyInput = document.getElementById('modal-api-key');
+                
+                // Use modern clipboard API if available, fallback to execCommand
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(apiKeyInput.value).then(() => {
+                        showCopyFeedback(this);
+                    }).catch(() => {
+                        // Fallback to old method
+                        fallbackCopy(apiKeyInput, this);
+                    });
+                } else {
+                    fallbackCopy(apiKeyInput, this);
+                }
+            });
+            
+            // Handle API key revocation
+            document.querySelectorAll('.revoke-key-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const keyId = this.dataset.keyId;
+                    const keyName = this.dataset.keyName;
+                    
+                    if (confirm(`Are you sure you want to revoke the API key "${keyName}"? This action cannot be undone.`)) {
+                        const originalText = this.textContent;
+                        this.disabled = true;
+                        this.textContent = 'Revoking...';
+                        
+                        const formData = new FormData();
+                        formData.append('key_id', keyId);
+                        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                        
+                        fetch('{% url "revoke_api_key" %}', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Remove the row from the table
+                                this.closest('tr').remove();
+                                
+                                // Show success message
+                                const alertDiv = document.createElement('div');
+                                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                                alertDiv.innerHTML = `
+                                    ${data.message}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                `;
+                                document.querySelector('.card-body').prepend(alertDiv);
+                                
+                                // Auto-dismiss after 5 seconds
+                                setTimeout(() => {
+                                    alertDiv.remove();
+                                }, 5000);
+                            } else {
+                                // Show error message
+                                alert(data.error || 'Failed to revoke API key');
+                                this.disabled = false;
+                                this.textContent = originalText;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred while revoking the API key');
+                            this.disabled = false;
+                            this.textContent = originalText;
+                        });
+                    }
+                });
+            });
+        });
+        
+        function fallbackCopy(inputElement, button) {
+            inputElement.select();
+            inputElement.setSelectionRange(0, 99999); // For mobile devices
+            try {
+                document.execCommand('copy');
+                showCopyFeedback(button);
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+            }
+        }
+        
+        function showCopyFeedback(button) {
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('btn-success');
+            button.classList.remove('btn-outline-secondary');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        }
+    </script>
+    {% endif %}
+{% endblock %}
+
+

@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load waffle_tags %}
+{% load static %}
+
+{% block title %}vid2scene - Upload Splat for LOD Generation{% endblock %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<h1 class="page-header mb-3">Upload a ply to generate LoDs and host on vid2scene</h1>
+<div class="text-muted mb-3">Upload a .ply file containing a trained Gaussian Splatting scene.</div>
+
+<div class="alert alert-info mb-3" role="alert">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>Tip:</strong> This will bypass the standard training pipeline. We will generate 5 level-of-detail tiers and convert them to chunked streaming format.
+</div>
+
+<form id="uploadForm" action="#" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if user_subscription_tier == "enterprise_perscene" and not user_can_generate_premium_scene_web %}
+    <div class="alert alert-info" role="alert">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Enterprise Per-Scene User:</strong> You currently have 0 API credits remaining. You are defaulted
+        back
+        to free tier limits until credits are replenished. <a href="{% url 'profile' %}">Manage your credits</a>
+    </div>
+    {% endif %}
+
+    {{ form.video_file|as_crispy_field }}
+    <p class="text-muted" style="margin-top: -0.5rem;">
+        <span>Max file size: 6GB</span>
+    </p>
+
+    {{ form.title|as_crispy_field }}
+
+    {% if user.is_authenticated %}
+    {{ form.public|as_crispy_field }}
+    <p class="text-muted" style="margin-top: -1rem;">This makes the link to your scene publicly accessible to other
+        users.</p>
+    {% else %}
+    <p class="text-muted" style="margin-top: -1rem;">Note: Scenes uploaded without logging in will be publicly
+        accessible using a direct link.<br> <a href="{% url 'account_login' %}">Login</a> to keep track of all of
+        your
+        scenes, create private scenes, and receive email notifications when processing is complete.</p>
+    {% endif %}
+
+    {{ form.allow_as_example|as_crispy_field }}
+    <p class="text-muted" style="margin-top: -1rem;">We'd love to showcase your scene as an inspiring example for
+        other
+        users! By checking this box, you're giving us permission to feature the scene on our <a
+            href="{% url 'example_list' %}">examples page</a> if selected.</p>
+
+    {% flag "promote_pro" %}
+    <p class="text-muted mb-1">
+        Queue priority: 
+        {% if user_subscription_tier == "enterprise" %}
+            Enterprise <span class="ent-badge ent-gradient">ENT</span>
+        {% elif user_subscription_tier == "enterprise_perscene" and user_can_generate_premium_scene_web %}
+            Enterprise <span class="ent-badge ent-gradient">ENT</span>
+        {% elif user_subscription_tier == "enterprise_perscene" %}
+            Default <span class="ent-badge ent-gradient">ENT</span>
+        {% else %}
+            Default
+        {% endif %}
+    </p>
+    {% endflag %}
+    <p class="text-muted">Estimated processing time: 30-60 minutes</p>
+    <button class="btn btn-primary" type="submit" id="uploadButton">
+        {% if user_subscription_tier == "enterprise_perscene" and user_can_generate_premium_scene_web %}
+        Upload - Costs 1 credit
+        {% else %}
+        Upload
+        {% endif %}
+    </button>
+</form>
+
+<br>
+<!-- Progress Bar -->
+<div id="uploadProgressContainer" style="display: none;">
+    <div class="progress" style="height: 25px;">
+        <div id="uploadProgressBar" class="progress-bar-striped progress-bar-animated bg-info" role="progressbar"
+            style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+    </div>
+</div>
+
+<!-- Error Message -->
+<div id="errorMessage" class="alert alert-danger" role="alert" style="display: none;"></div>
+
+
+<script type="module">
+    import { BlockBlobClient } from 'https://cdn.jsdelivr.net/npm/@azure/storage-blob@12.31.0/+esm';
+    
+    let uploadPromise = null;
+    let blobName = null;
+    let uploadInProgress = false;
+    let totalFileSize = 0;
+    let uploadedAtStart = 0;
+    let currentUploadedBytes = 0;
+    let showingProgress = false;
+    let currentFileHash = null;
+    let activeAbortController = null;
+
+    // Function to warn user before leaving page during upload
+    function beforeUnloadHandler(e) {
+        if (uploadInProgress) {
+            e.preventDefault();
+            e.returnValue = ''; // Required for Chrome
+            return ''; // Required for some older browsers
+        }
+    }
+
+    // Function to generate a simple hash for a file
+    async function generateFileHash(file) {
+        return `${file.name}-${file.size}-${file.lastModified}`;
+    }
+
+    // Function to cancel any ongoing upload
+    function cancelCurrentUpload() {
+        if (activeAbortController) {
+            try {
+                activeAbortController.abort();
+            } catch (e) {
+                console.error("Error aborting previous upload:", e);
+            }
+            activeAbortController = null;
+        }
+        // Remove beforeunload handler when canceling
+        window.removeEventListener('beforeunload', beforeUnloadHandler);
+        uploadPromise = null;
+        blobName = null;
+        uploadInProgress = false;
+        currentUploadedBytes = 0;
+        showingProgress = false;
+    }
+
+    // Start uploading as soon as a file is selected
+    document.getElementById('id_video_file').addEventListener('change', async function () {
+        var file = this.files[0];
+        if (!file) return;
+
+        // Cancel any existing upload
+        cancelCurrentUpload();
+
+        // Hide any previous error messages
+        document.getElementById('errorMessage').style.display = 'none';
+
+        // Set new file information
+        totalFileSize = file.size;
+        currentUploadedBytes = 0;
+        currentFileHash = await generateFileHash(file);
+
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const validExtensions = ['ply'];
+
+        try {
+            if (file.size > {{ max_video_file_size }}) {
+                throw new Error('File size is too large. Please try again with a smaller file.');
+            }
+
+            if (!validExtensions.includes(fileExtension)) {
+                throw new Error('Invalid file type. Please upload a .ply file.');
+            }
+
+            // Get SAS URL
+            var sasResponse = await fetch("{% url 'web_api_generate_upload_sas' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    'file_extension': fileExtension
+                })
+            });
+
+            if (!sasResponse.ok) {
+                throw new Error('Failed to get URL.');
+            }
+
+            var sasData = await sasResponse.json();
+            var sasUrl = sasData.sas_url;
+            blobName = sasData.blob_name;
+
+            // Start upload in background
+            uploadInProgress = true;
+            // Add beforeunload handler to warn user about leaving page
+            window.addEventListener('beforeunload', beforeUnloadHandler);
+
+            // Store the file hash we're uploading
+            const fileHashForThisUpload = currentFileHash;
+
+            // Create a promise that resolves when the upload is complete
+            activeAbortController = new AbortController();
+            uploadPromise = (async () => {
+                try {
+                    const blockBlobClient = new BlockBlobClient(sasUrl);
+                    await blockBlobClient.uploadBrowserData(file, {
+                        blockSize: 32 * 1024 * 1024, // 32MB chunks for large files
+                        concurrency: 20, // 20 parallel chunk uploads
+                        abortSignal: activeAbortController.signal,
+                        onProgress: (ev) => {
+                            if (fileHashForThisUpload === currentFileHash) {
+                                currentUploadedBytes = ev.loadedBytes;
+                                if (showingProgress) {
+                                    updateVisibleProgress();
+                                }
+                            }
+                        }
+                    });
+                    
+                    if (fileHashForThisUpload === currentFileHash) {
+                        uploadInProgress = false;
+                        window.removeEventListener('beforeunload', beforeUnloadHandler);
+                        currentUploadedBytes = totalFileSize;
+                        if (showingProgress) {
+                            updateVisibleProgress();
+                        }
+                        activeAbortController = null;
+                    }
+                } catch (error) {
+                    if (fileHashForThisUpload === currentFileHash) {
+                        uploadInProgress = false;
+                        window.removeEventListener('beforeunload', beforeUnloadHandler);
+                        activeAbortController = null;
+                        if (error && error.name === 'AbortError') {
+                            console.log("Upload aborted");
+                            return; // Don't throw if just aborted
+                        }
+                        throw new Error('Failed to upload');
+                    }
+                }
+            })();
+
+        } catch (error) {
+            const errorMessage = document.getElementById('errorMessage');
+            let userMessage = 'An error occurred while processing your file. Please try again.';
+
+            if (error?.message) {
+                if (error.message.includes('File size is too large')) {
+                    userMessage = 'The file size is too large. Please try again with a smaller file.';
+                } else if (error.message.includes('Invalid file type')) {
+                    userMessage = 'The file type is invalid. Please upload a .ply file.';
+                } else if (error.message.includes('Failed to get URL')) {
+                    userMessage = "You've reached the maximum allowed requests for this period. Please wait a while before trying again.";
+                }
+            }
+
+            errorMessage.textContent = userMessage;
+            errorMessage.style.display = 'block';
+            uploadPromise = null;
+            blobName = null;
+        }
+        });
+
+    // Function to update visible progress based on current state
+    function updateVisibleProgress() {
+        const progressBar = document.getElementById('uploadProgressBar');
+
+        let remainingBytes = totalFileSize - uploadedAtStart;
+        let bytesSinceStart = currentUploadedBytes - uploadedAtStart;
+        let percentComplete;
+
+        if (remainingBytes <= 0) {
+            percentComplete = 100;
+        } else {
+            percentComplete = Math.round((bytesSinceStart / remainingBytes) * 100);
+            percentComplete = Math.min(percentComplete, 100);
+        }
+
+        progressBar.style.width = percentComplete + '%';
+        progressBar.setAttribute('aria-valuenow', percentComplete);
+        progressBar.textContent = percentComplete + '%';
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const form = document.getElementById('uploadForm');
+        const formElements = form.elements;
+        for (let i = 0; i < formElements.length; i++) {
+            formElements[i].disabled = true;
+        }
+
+        var title = document.getElementById('id_title').value;
+        var isPublic = document.getElementById('id_public') ? document.getElementById('id_public').checked : false;
+        var allowAsExample = document.getElementById('id_allow_as_example') ? document.getElementById('id_allow_as_example').checked : false;
+
+        const videoFileInput = document.getElementById('id_video_file');
+        const currentFile = videoFileInput.files[0];
+        const currentFileSize = currentFile ? currentFile.size : 0;
+
+        const isUploadComplete = !uploadInProgress &&
+            blobName &&
+            currentUploadedBytes === totalFileSize &&
+            totalFileSize === currentFileSize &&
+            totalFileSize > 0;
+
+        var progressContainer = document.getElementById('uploadProgressContainer');
+        progressContainer.style.display = 'block';
+
+        uploadedAtStart = currentUploadedBytes;
+        showingProgress = true;
+
+        const progressBar = document.getElementById('uploadProgressBar');
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', 0);
+        progressBar.textContent = '0%';
+
+        try {
+            if (!uploadPromise && !blobName) {
+                var file = videoFileInput.files[0];
+                if (!file) {
+                    throw new Error('Please select a .ply file to upload.');
+                }
+                throw new Error('Upload not started. Please try again.');
+            }
+
+            if (isUploadComplete) {
+                await new Promise((resolve) => {
+                    let progress = 0;
+                    const duration = 1000;
+                    const steps = 20;
+                    const stepDuration = duration / steps;
+                    const stepSize = 100 / steps;
+
+                    const animateProgress = () => {
+                        progress += stepSize;
+                        if (progress >= 100) {
+                            progress = 100;
+                            progressBar.style.width = '100%';
+                            progressBar.setAttribute('aria-valuenow', 100);
+                            progressBar.textContent = '100%';
+                            resolve();
+                        } else {
+                            progressBar.style.width = Math.round(progress) + '%';
+                            progressBar.setAttribute('aria-valuenow', Math.round(progress));
+                            progressBar.textContent = Math.round(progress) + '%';
+                            setTimeout(animateProgress, stepDuration);
+                        }
+                    };
+
+                    animateProgress();
+                });
+            } else if (uploadInProgress) {
+                await uploadPromise;
+            } else {
+                throw new Error('Upload interrupted. Please check your network connection, refresh, and select your file again.');
+            }
+
+            // Notify the server about the uploaded file
+            var notifyResponse = await fetch("{% url 'web_api_submit_generate_lod' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    public: isPublic,
+                    blob_name: blobName,
+                    allow_as_example: allowAsExample
+                })
+            });
+
+            if (!notifyResponse.ok) {
+                throw new Error('Failed to register the uploaded file.');
+            }
+
+            var notifyData = await notifyResponse.json();
+            if (notifyData.success) {
+                window.location.href = notifyData.redirect_url;
+            } else {
+                throw new Error(notifyData.error_message || 'Unknown error.');
+            }
+
+        } catch (error) {
+            let userMessage = 'An error occurred while uploading your file. Please try again.';
+
+            if (error?.message) {
+                if (error.message.includes('Please select')) {
+                    userMessage = 'Please select a .ply file to upload.';
+                } else if (error.message.includes('Failed to register')) {
+                    userMessage = 'Your file was uploaded but could not be processed. Please try again or contact support.';
+                } else if (error.message.includes('Upload not started')) {
+                    userMessage = 'Upload not started. Please try selecting your file again.';
+                } else if (error.message.includes('Upload interrupted')) {
+                    userMessage = error.message;
+                }
+            }
+
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = userMessage;
+            errorMessage.style.display = 'block';
+            progressContainer.style.display = 'none';
+            showingProgress = false;
+
+            for (let i = 0; i < formElements.length; i++) {
+                formElements[i].disabled = false;
+            }
+        }
+    });
+
+</script>
+{% endblock %}

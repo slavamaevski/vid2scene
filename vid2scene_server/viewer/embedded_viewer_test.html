@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vid2scene Embed Test</title>
+    <style>
+        /* Optional: Styles for the test page */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .embed-section {
+            margin-bottom: 40px;
+        }
+        .embed-section h2 {
+            margin-bottom: 10px;
+        }
+        .embed-section iframe {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>vid2scene Embed Test Page</h1>
+    <p>This page demonstrates how to embed the vid2scene 3D viewer into another website using an iframe.</p>
+
+    <!-- Standard Embed -->
+    <div class="embed-section">
+        <h2>Standard Embed</h2>
+        <iframe src="https://vid2scene.com/viewer/cab142a0-6e2b-4719-b47a-b82e04770164/" 
+                width="800" 
+                height="600" 
+                style="border: none;" 
+                >
+            Your browser does not support iframes.
+        </iframe>
+    </div>
+
+    <!-- Responsive Embed -->
+    <div class="embed-section">
+        <h2>Responsive Embed</h2>
+        <div style="position: relative; width: 100%; height: 0; padding-bottom: 75%;">
+            <iframe src="https://vid2scene.com/viewer/cab142a0-6e2b-4719-b47a-b82e04770164/" 
+                    style="position: absolute; top:0; left: 0; width: 100%; height: 100%;" 
+                    sandbox="allow-same-origin">
+                Your browser does not support iframes.
+            </iframe>
+        </div>
+    </div>
+
+    <!-- Instructions for Users -->
+    <div class="embed-section">
+        <h2>Instructions</h2>
+        <p>To embed the vid2scene viewer on your website, use the following iframe code:</p>
+        <pre>
+            &lt;iframe src="https://vid2scene.com/viewer/{{ spj_id }}/" 
+                    width="800" 
+                    height="600" 
+                    style="border: none;" 
+                    allowfullscreen&gt;
+            &lt;/iframe&gt;
+        </pre>
+        <p><strong>Replace `{{ spj_id }}`</strong> with the actual Scene Processing Job ID you want to embed.</p>
+    </div>
+
+    <!-- Responsive Embed Code Example -->
+    <div class="embed-section">
+        <h2>Responsive Embed Code Example</h2>
+        <pre>
+&lt;div style="position: relative; width: 100%; height: 0; padding-bottom: 75%;"&gt;
+    &lt;iframe src="https://vid2scene.com/viewer/{{ spj_id }}/" 
+            style="position: absolute; top:0; left: 0; width: 100%; height: 100%;" 
+            frameborder="0" 
+            allowfullscreen 
+            sandbox="allow-scripts allow-same-origin"&gt;
+    &lt;/iframe&gt;
+&lt;/div&gt;
+        </pre>
+        <p>This code ensures that the embedded viewer is responsive and maintains the correct aspect ratio across different devices.</p>
+    </div>
+</body>
+</html>

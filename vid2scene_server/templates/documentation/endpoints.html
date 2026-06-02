@@ -1,0 +1,541 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}vid2scene - API Endpoints{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'documentation/css/docs.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="docs" class="container my-4">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 docs-sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">API Documentation</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'api_docs' %}" class="list-group-item list-group-item-action">
+                        Overview
+                    </a>
+                    <a href="{% url 'getting_started' %}" class="list-group-item list-group-item-action">
+                        Getting Started
+                    </a>
+                    <a href="{% url 'authentication_docs' %}" class="list-group-item list-group-item-action">
+                        Authentication
+                    </a>
+                    <a href="{% url 'endpoints_docs' %}" class="list-group-item list-group-item-action active">
+                        API Endpoints
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <h1>API Endpoints</h1>
+            <p class="lead">Complete reference for all vid2scene API endpoints.</p>
+
+            <div class="alert alert-info">
+                <h5 class="alert-heading">🏢 Enterprise API</h5>
+                <p class="mb-0">All endpoints require Enterprise subscription and API key authentication. You can only access your own jobs.</p>
+            </div>
+
+            <!-- Jobs Endpoints -->
+            <h2 id="jobs">Jobs</h2>
+            <p>Manage your video processing jobs.</p>
+
+            <!-- List Jobs -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-success me-2">GET</span>
+                        List Jobs
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>GET /api/v1/jobs/</code>
+                    <p class="mt-3">Retrieve a list of your video processing jobs.</p>
+                    
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                        <pre><code>curl -H "Authorization: Api-Key YOUR_API_KEY" \
+     "{{ site_url }}/api/v1/jobs/"</code></pre>
+                    </div>
+
+                    <h6>Example Response</h6>
+                    <div class="bg-light p-3 rounded">
+                        <pre><code>[
+  {
+    "job_id": "123e4567-e89b-12d3-a456-426614174000",
+    "title": "My awesome video"
+  },
+  {
+    "job_id": "987fcdeb-51a2-43d1-b789-123456789abc",
+    "title": "Another video scene"
+  }
+]</code></pre>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <h6 class="alert-heading">📋 Lightweight Response</h6>
+                        <p class="mb-0">The list endpoint returns only job ID and title for faster performance. Use the <code>GET /api/v1/jobs/{job_id}/</code> endpoint to get detailed information about a specific job.</p>
+                    </div>
+
+                </div>
+            </div>
+
+             <!-- Job Status -->
+             <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-success me-2">GET</span>
+                        Get Job Status
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>GET /api/v1/jobs/{job_id}/</code>
+                    <p class="mt-3">Get the current processing status and progress of a job. This endpoint returns detailed information about the job including its current status, progress, and configuration.</p>
+                    
+                    <h6>Status Values</h6>
+                    <p>The <code>status</code> field can have the following values:</p>
+                    <ul>
+                        <li><code>Queued</code> - Waiting to start processing</li>
+                        <li><code>Queued - position: X</code> - Waiting in queue at position X</li>
+                        <li><code>Processing video</code> - Currently processing the video</li>
+                        <li><code>Generating 3D scene</code> - Creating the 3D reconstruction</li>
+                        <li><code>Finished</code> - Completed successfully</li>
+                        <li><code>Failed</code> - Processing failed</li>
+                        <li><code>Not found</code> - Job not found in queue</li>
+                    </ul>
+                    
+                    <p>The <code>percent_complete</code> field shows progress during 3D scene generation (0-100), or <code>null</code> if not yet started.</p>
+                    
+                    <h6>Example Response</h6>
+                    <div class="bg-light p-3 rounded">
+                        <pre><code>{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "My awesome video",
+  "status": "Generating 3D scene",
+  "percent_complete": 75,
+  "uploaded_at": "2024-01-15T10:30:00Z",
+  "public": false,
+  "reconstruction_method": "glomap",
+  "training_max_num_gaussians": 30000,
+  "training_num_steps": 7000,
+  "remove_background": false,
+  "has_ply": false,
+  "has_spz": false,
+  "camera_data": {
+    "position": {"x": 0.0, "y": 0.0, "z": 5.0},
+    "lookAt": {"x": 0.0, "y": 0.0, "z": 0.0},
+    "up": {"x": 0.0, "y": 1.0, "z": 0.0},
+    "cameraType": "orbital"
+  }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Job -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-warning me-2">PATCH</span>
+                        Update Job
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>PATCH /api/v1/jobs/{job_id}/</code>
+                    <p class="mt-3">Update job properties like title, public status, or camera data.</p>
+                    
+                    <h6>Request Body</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>title</code></td>
+                                    <td>string</td>
+                                    <td>Job title</td>
+                                </tr>
+                                <tr>
+                                    <td><code>public</code></td>
+                                    <td>boolean</td>
+                                    <td>Whether the job is publicly visible</td>
+                                </tr>
+                                <tr>
+                                    <td><code>camera_data</code></td>
+                                    <td>object</td>
+                                    <td>Camera configuration data</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                        <pre><code>curl -X PATCH \
+     -H "Authorization: Api-Key YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"title": "Updated title", "public": true}' \
+     "{{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/"</code></pre>
+                    </div>
+
+
+                </div>
+            </div>
+
+            <!-- Delete Job -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-danger me-2">DELETE</span>
+                        Delete Job
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>DELETE /api/v1/jobs/{job_id}/</code>
+                    <p class="mt-3">Delete a job and all associated files. This action cannot be undone.</p>
+                    
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                        <pre><code>curl -X DELETE \
+     -H "Authorization: Api-Key YOUR_API_KEY" \
+     "{{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/"</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download File -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-success me-2">GET</span>
+                        Get Download URL (Redirect)
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>GET /api/v1/jobs/{job_id}/download/{file_type}/</code>
+                    <p class="mt-3">Returns a 302 redirect to a secure, time-limited download URL for the specified file type. URLs expire in 15 minutes.</p>
+                    
+                    <h6>Path Parameters</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>job_id</code></td>
+                                    <td>UUID</td>
+                                    <td>The unique identifier of the job</td>
+                                </tr>
+                                <tr>
+                                    <td><code>file_type</code></td>
+                                    <td>string</td>
+                                    <td>File type to download: <code>ply</code> or <code>spz</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                        <pre><code># Follow redirects to download the file
+curl -H "Authorization: Api-Key YOUR_API_KEY" \
+     -L "{{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/download/ply/" \
+     -o scene.ply --fail --show-error</code></pre>
+                    </div>
+                    
+                    <h6>Response</h6>
+                    <p>Returns a <code>302 Found</code> redirect to the secure download URL. The file will be downloaded directly from cloud storage.</p>
+
+                    <div class="alert alert-info mt-3">
+                        <strong>💡 Usage:</strong> Use <code>-L</code> to follow redirects and <code>-o</code> to save the file. No additional authentication required for the redirected URL.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Image -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-success me-2">GET</span>
+                        Get Preview Image (Redirect)
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>GET /api/v1/jobs/{job_id}/preview/</code>
+                    <p class="mt-3">Returns a 302 redirect to a secure, time-limited URL for the preview image. URLs expire in 15 minutes.</p>
+
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                        <pre><code>curl -H "Authorization: Api-Key YOUR_API_KEY" \
+     -L "{{ site_url }}/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/preview/" \
+     -o preview.jpg --fail --show-error</code></pre>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <strong>💡 Tip:</strong> Use <code>-L</code> to follow redirects and <code>-o</code> to save the image to a file.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Endpoints -->
+            <h2 id="upload">Upload</h2>
+            <p>Upload videos for processing.</p>
+
+            <!-- Generate Upload SAS -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-primary me-2">POST</span>
+                        Generate Upload URL
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>POST /api/v1/generate-upload-url/</code>
+                    <p class="mt-3">Generate a secure upload URL for video files. This returns a time-limited URL that you can use to upload your video directly to our storage.</p>
+                    
+                    <h6>Request Body</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>file_extension</code></td>
+                                    <td>string</td>
+                                    <td>Yes</td>
+                                    <td>File extension only (e.g., <code>mp4</code>, <code>mov</code>)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                         <pre><code>curl -X POST \
+     -H "Authorization: Api-Key YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"file_extension": "mp4"}' \
+     "{{ site_url }}/api/v1/generate-upload-url/"</code></pre>
+                    </div>
+
+                    <h6>Example Response</h6>
+                    <div class="bg-light p-3 rounded">
+                        <pre><code>{
+  "url": "https://storage.blob.core.windows.net/container/videos/uuid.mp4?sv=...",
+  "blob_name": "videos/uuid.mp4"
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Job -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <span class="badge bg-primary me-2">POST</span>
+                        Create Processing Job
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <code>POST /api/v1/submit-job/</code>
+                    <p class="mt-3">Create and start a new video processing job after uploading your video file.</p>
+                    
+                    <h6>Request Body</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>blob_name</code></td>
+                                    <td>string</td>
+                                    <td>Yes</td>
+                                    <td>Blob name from upload response</td>
+                                </tr>
+                                <tr>
+                                    <td><code>title</code></td>
+                                    <td>string</td>
+                                    <td>No</td>
+                                    <td>Job title (defaults to filename)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>public</code></td>
+                                    <td>boolean</td>
+                                    <td>No</td>
+                                    <td>Make job publicly visible (default: false)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>reconstruction_method</code></td>
+                                    <td>string</td>
+                                    <td>No</td>
+                                    <td>Processing method (default: "glomap")</td>
+                                </tr>
+                                <tr>
+                                    <td><code>training_max_num_gaussians</code></td>
+                                    <td>integer</td>
+                                    <td>No</td>
+                                    <td>Maximum number of Gaussians for training (default: 1000000)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>training_num_steps</code></td>
+                                    <td>integer</td>
+                                    <td>No</td>
+                                    <td>Number of training steps (default: 25000)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>apriltag_size_mm</code></td>
+                                    <td>float</td>
+                                    <td>No</td>
+                                    <td>Physical size of AprilTag in millimeters (1-1000mm). Measured from inner white square. When provided, enables automatic scale calibration using AprilTags. Only supports <code>tagStandard41h12</code> family. AprilTags will only be detected if this parameter is included.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>remove_background</code></td>
+                                    <td>boolean</td>
+                                    <td>No</td>
+                                    <td>Remove background from images before processing (default: false)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>camera_type</code></td>
+                                    <td>string</td>
+                                    <td>No</td>
+                                    <td>Default camera control mode for the viewer. Options: <code>"orbital"</code> or <code>"drone"</code>. If not specified, viewer starts in drone mode.</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">📐 AprilTag Scale Calibration</h6>
+                        <p class="mb-0">Automatically set your 3D reconstruction to real-world scale by placing AprilTags (tagStandard41h12 family) in your scene. Provide the tag's physical size in millimeters to enable this feature. <a href="https://github.com/AprilRobotics/apriltag-imgs" target="_blank">Download tags here</a>.</p>
+                    </div>
+
+                    <h6>Example Request</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                         <pre><code>curl -X POST \
+     -H "Authorization: Api-Key YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"blob_name": "videos/uuid.mp4", "title": "My awesome video", "public": false, "reconstruction_method": "glomap", "remove_background": false}' \
+     "{{ site_url }}/api/v1/submit-job/"</code></pre>
+                    </div>
+
+                    <h6>Example Request with Orbital Camera Controls</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                         <pre><code>curl -X POST \
+     -H "Authorization: Api-Key YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"blob_name": "videos/uuid.mp4", "title": "My awesome video", "camera_type": "orbital"}' \
+     "{{ site_url }}/api/v1/submit-job/"</code></pre>
+                    </div>
+
+                    <h6>Example Request with AprilTag Calibration</h6>
+                    <div class="bg-dark text-light p-3 rounded">
+                         <pre><code>curl -X POST \
+     -H "Authorization: Api-Key YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"blob_name": "videos/uuid.mp4", "title": "My Room", "apriltag_size_mm": 95.6}' \
+     "{{ site_url }}/api/v1/submit-job/"</code></pre>
+                    </div>
+
+                    <h6>Example Response</h6>
+                    <div class="bg-light p-3 rounded">
+                        <pre><code>{
+  "success": true,
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+  "title": "My awesome video",
+  "status": "queued",
+  "uploaded_at": "2024-01-15T10:30:00Z",
+  "public": false,
+  "reconstruction_method": "glomap",
+  "training_max_num_gaussians": 30000,
+  "training_num_steps": 7000,
+  "remove_background": false
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Responses -->
+            <h2 id="errors">Error Responses</h2>
+            <p>All error responses include an error message and appropriate HTTP status code.</p>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Status Code</th>
+                            <th>Description</th>
+                            <th>Example Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>400</code></td>
+                            <td>Bad Request</td>
+                            <td><code>{"error": "Invalid file format"}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>401</code></td>
+                            <td>Unauthorized</td>
+                            <td><code>{"error": "Invalid API key"}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>403</code></td>
+                            <td>Forbidden</td>
+                            <td><code>{"error": "Insufficient permissions"}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>404</code></td>
+                            <td>Not Found</td>
+                            <td><code>{"error": "Job not found"}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>429</code></td>
+                            <td>Rate Limited</td>
+                            <td><code>{"error": "Rate limit exceeded"}</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>500</code></td>
+                            <td>Server Error</td>
+                            <td><code>{"error": "Internal server error"}</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'documentation/js/docs.js' %}"></script>
+{% endblock %}

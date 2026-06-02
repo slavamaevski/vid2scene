@@ -1,0 +1,38 @@
+# Build context for the web image. It only needs vid2scene_server/ and scripts/,
+# so exclude the heavy ML submodules and everything else to keep builds fast.
+.git
+**/__pycache__
+**/node_modules
+*.log
+
+# ML / pipeline submodules (only the worker image needs these)
+gsplat
+glomap
+vggt
+sam3
+spz
+Hierarchical-Localization
+quest-3d-reconstruction
+3dgs-autolod
+ply-to-sog
+DiffusionSfM
+FastVGGT
+SpaTrackerV2
+max2sphere
+nerf_dataset_preprocessing_helper
+vid2scene_core
+vid2scene_node_editor
+quest-3d-reconstruction
+
+# Local-only / regenerated artifacts
+.env
+azurite
+previews
+test_assets
+**/test_assets
+**/preview_images
+vid2scene_server/ply_files
+vid2scene_server/videos
+vid2scene_server/db.sqlite3
+vid2scene_server/collectedstatic
+path=vid2scene_server

@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+
+{% block title %}vid2scene - Job Status{% endblock %}
+
+{% block extra_scripts_head %}
+    <!-- Add JSZip and FileSaver.js for client-side zipping -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+{% endblock %}
+
+{% block content %}
+    <h1>{{ spj.title }}</h1>
+    <br>
+    {% if user.is_superuser %}
+        <p><strong>Owner:</strong> {{ spj.user }}</p>
+    {% endif %}
+    <p><a href="{{ request.build_absolute_uri }}">Refresh</a> this page to see the latest status.</p>
+    <p><strong>Job ID:</strong> {{ spj.id }}</p>
+    <p><strong>Uploaded At:</strong> {{ spj.uploaded_at }}</p>
+    {% if spj.apriltag_size_mm %}
+    <p><strong>AprilTag Calibration:</strong> <span class="ent-badge ent-gradient">ENT</span> Enabled ({{ spj.apriltag_size_mm }}mm)</p>
+    {% endif %}
+    
+
+    <p><strong>Current Status:</strong> {{ status }}
+        {% if status == "Failed" %}
+            <a href="#" 
+               data-bs-toggle="popover" 
+               data-bs-trigger="focus" 
+               data-bs-placement="right" 
+               data-bs-content="This could be due to video quality issues (like shaky footage, poor lighting, or fast camera movements) or technical issues on our end. Please feel free to try again!"
+               tabindex="0"
+               role="button">
+                <small>(Why?)</small>
+            </a>
+        {% endif %}
+    </p>
+    
+    {% if spj.id %}
+        {% if status == "Finished" %}
+            <div class="mb-3">
+                <h4>3D Scene Viewer</h4>
+                <p><a href="{% url 'splat_viewer_spj_id' spj.id %}">View 3D scene in browser</a></p>
+                
+                {% if spj.user %}
+                    <p><strong>Scene Visibility Status:</strong> {% if spj.public %}Publicly Shareable Via Direct Link{% else %}Not Public{% endif %}</p>
+                    {% if spj.public %}
+                        <p><small class="text-muted">Share this link: <br> 
+                            <a href="{% url 'splat_viewer_spj_id' spj.id %}">{{ request.scheme }}://{{ request.get_host }}{% url 'splat_viewer_spj_id' spj.id %}</a>
+                            <button class="btn btn-sm btn-link text-muted py-0 px-2 copy-link-btn" data-umami-event="Share Copy Link Status Page" data-umami-event-id="{{ spj.id }}" style="vertical-align: middle; font-size: 0.8rem; text-transform: none; text-decoration: none;" data-copy-text="{{ request.scheme }}://{{ request.get_host }}{% url 'splat_viewer_spj_id' spj.id %}">
+                                <i class="bi bi-clipboard" style="vertical-align: 0.3em;"></i> Copy
+                            </button>
+                        </small></p>
+                    {% endif %}
+                    {% if spj.public %}
+                        <form method="post" action="{% url 'set_public_status' spj.id 'false' %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-info btn-sm">Make Link Private</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'set_public_status' spj.id 'true' %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-info btn-sm">Make Scene Publicly Shareable</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <p><small class="text-muted">Or share this link: <br> 
+                        <a href="{% url 'splat_viewer_spj_id' spj.id %}">{{ request.scheme }}://{{ request.get_host }}{% url 'splat_viewer_spj_id' spj.id %}</a>
+                        <button class="btn btn-sm btn-link text-muted py-0 px-2 copy-link-btn" data-umami-event="Share Copy Link Status Page" data-umami-event-id="{{ spj.id }}" style="vertical-align: middle; font-size: 0.8rem; text-transform: none; text-decoration: none;" data-copy-text="{{ request.scheme }}://{{ request.get_host }}{% url 'splat_viewer_spj_id' spj.id %}">
+                            <i class="bi bi-clipboard" style="vertical-align: 0.3em;"></i> Copy
+                        </button>
+                    </small></p>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                <h4>Download Options</h4>
+                <p><a href="{% url 'download_ply' spj.id %}" data-umami-event="Download PLY" data-umami-event-id="{{ spj.id }}">Download Processed 3D Scene (PLY)</a></p>
+                {% if spj.spz_file %}
+                    <p><a href="{% url 'download_spz' spj.id %}" data-umami-event="Download SPZ" data-umami-event-id="{{ spj.id }}">Download Processed 3D Scene (SPZ)</a></p>
+                {% endif %}
+                {% if spj.sog_file %}
+                    <p><a href="#" id="download-sog-btn" onclick="downloadZippedSog(event)" data-umami-event="Download SOG" data-umami-event-id="{{ spj.id }}">Download Processed 3D Scene (SOG) <span id="sog-progress" class="text-muted ms-2" style="font-size: 0.8rem;"></span></a></p>
+                {% endif %}
+                {% if spj.lod_file %}
+                    <p><a href="#" id="download-lod-btn" onclick="downloadZippedLod(event)" data-umami-event="Download LOD" data-umami-event-id="{{ spj.id }}">Download Processed 3D Scene (LoD SOG) <span id="lod-progress" class="text-muted ms-2" style="font-size: 0.8rem;"></span></a></p>
+                {% endif %}
+            </div>
+        {% endif %}     
+
+        {% if spj.preview_image %}
+            <div class="mb-3">
+                <h4>Progress</h4>
+                {% if percent_complete %}
+                    <p><strong>Progress: </strong> {{ percent_complete|floatformat:2 }}%</p>
+                {% endif %}
+                {% if spj.preview_image %}
+                    <p><strong>Preview Image: </strong></p>
+                    <p><img style="height: 200px;" src="{% url 'preview_image' spj.id %}" alt="Preview Image"></p>
+                {% elif status != "Failed" %}
+                    <p><strong>Preview Image: </strong>Preview images will appear once the 3D training begins (about halfway through processing). Please check back in a little while!</p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <p class="text-muted">Save this URL to check back later: <br> <a href="{{ request.build_absolute_uri }}">{{ request.build_absolute_uri }}</a></p>
+
+        {% if not spj.example or user.is_superuser %}
+            <button class="btn btn-danger btn-sm" onclick="confirmDelete()">Delete Scene</button>
+        {% else %}
+            <p class="text-muted">This scene is an example. Please contact the support email below if you would like this scene removed from the example list and deleted.</p>
+        {% endif %}
+        <p id="deletion-error" class="text-danger" style="display: none;">Deletion failed</p>
+        
+        <!-- Refund Section for Enterprise Per-Scene Users -->
+        {% if user_subscription_tier == "enterprise_perscene" %}
+            {% with latest_refund=spj.refund_requests.first %}
+                {% if not latest_refund %}
+                    <!-- Show refund request options based on job status -->
+                    {% if status == "Failed" %}
+                        <button class="btn btn-danger btn-sm" onclick="requestImmediateRefund()" id="refund-btn">Get Credit Refund</button>
+                        <p id="refund-message" class="mt-2 mb-0"></p>
+                    {% elif status == "Finished" %}
+                        <button class="btn btn-info btn-sm" onclick="toggleQualityRefundForm()" id="show-refund-form-btn">Request Credit Refund</button>
+                        
+                        <div id="quality-refund-form" style="display: none;" class="mt-3">
+                            <div class="mb-3">
+                                <label class="form-label">Please describe the specific issues with your scene:</label>
+                                <textarea class="form-control" id="refund-notes" rows="3" 
+                                         placeholder="Help us understand what went wrong so we can improve..."></textarea>
+                            </div>
+                            <button class="btn btn-warning btn-sm" onclick="submitQualityRefund()" id="submit-refund-btn">
+                                <i class="bi bi-send"></i> Submit Refund Request
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="toggleQualityRefundForm()">Cancel</button>
+                        </div>
+                        <p id="refund-message" class="mt-2 mb-0"></p>
+                    {% endif %}
+                {% elif latest_refund.status == "REQUESTED" %}
+                    <div class="mt-3 p-3 border border-warning bg-light rounded">
+                        <h6><i class="bi bi-clock text-warning"></i> Refund Request Pending</h6>
+                        <p class="mb-2">Your refund request is being reviewed. We'll get back to you within 24 hours.</p>
+                        <small class="text-muted">Reason: {{ latest_refund.get_reason_display }}</small>
+                        {% if latest_refund.customer_notes %}
+                            <br><small class="text-muted">Your notes: "{{ latest_refund.customer_notes }}"</small>
+                        {% endif %}
+                    </div>
+                {% elif latest_refund.status == "APPROVED" %}
+                    <div class="mt-3 p-3 border border-success bg-light rounded">
+                        <h6><i class="bi bi-check-circle text-success"></i> Credit Refunded</h6>
+                        <p class="mb-2">Your credit has been refunded. Thank you for the feedback!</p>
+                        {% if latest_refund.auto_approved %}
+                            <small class="text-muted">Automatically processed due to technical failure.</small>
+                        {% else %}
+                            <small class="text-muted">Processed by admin on {{ latest_refund.processed_at|date:"M j, Y" }}</small>
+                        {% endif %}
+                    </div>
+                {% elif latest_refund.status == "DENIED" %}
+                    <div class="mt-3 p-3 border border-secondary bg-light rounded">
+                        <h6><i class="bi bi-x-circle text-secondary"></i> Refund Request Reviewed</h6>
+                        <p class="mb-2">Your refund request was reviewed.</p>
+                        {% if latest_refund.admin_notes %}
+                            <small class="text-muted">Admin notes: {{ latest_refund.admin_notes }}</small>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+        {% if user.is_superuser %}
+            <p><strong>Training Max Num Gaussians:</strong> {{ spj.training_max_num_gaussians|intcomma }}</p>
+            <p><strong>Training Num Steps:</strong> {{ spj.training_num_steps|intcomma }}</p>
+            <p><strong>Reconstruction Method:</strong> {{ spj.reconstruction_method }}</p>
+            <p><strong>Use Background Sphere:</strong> {{ spj.use_background_sphere }}</p>
+            <p><strong>Remove Background:</strong> {{ spj.remove_background }}</p>
+            <p><strong>Equirectangular:</strong> {{ spj.equirectangular }}</p>
+            <p><strong>Pilgram Filter:</strong> {{ spj.pilgram_filter }}</p>
+            <p><strong>AprilTag Size (mm):</strong> {{ spj.apriltag_size_mm|default:"Not used" }}</p>
+        {% endif %}
+    {% endif %}
+
+    <script>
+        // Initialize all popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        })
+
+        // Function to copy text to clipboard
+        function copyToClipboard(button, text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Store the original HTML content
+                const originalHtml = button.innerHTML;
+                
+                // Show success feedback
+                button.innerHTML = '<i class="bi bi-check" style="vertical-align: 0.3em;"></i> Copied!';
+                button.classList.remove('text-muted');
+                button.classList.add('text-success');
+                
+                // Reset button after a delay
+                setTimeout(function() {
+                    button.innerHTML = originalHtml;
+                    button.classList.remove('text-success');
+                    button.classList.add('text-muted');
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Could not copy text: ', err);
+                // Show error feedback
+                alert('Failed to copy link. Please try again or copy manually.');
+            });
+        }
+
+        // Add event listeners to all copy buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const copyButtons = document.querySelectorAll('.copy-link-btn');
+            copyButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const textToCopy = this.getAttribute('data-copy-text');
+                    copyToClipboard(this, textToCopy);
+                });
+            });
+        });
+
+        function confirmDelete() {
+            function showError() {
+                const errorText = document.getElementById('deletion-error');
+                errorText.style.display = '';
+            }
+            if (confirm("Are you sure you want to delete this scene? This action cannot be undone.")) {
+                fetch("{% url 'delete_job' spj.id %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.href = "{% url 'jobs_status' %}";
+                    } else {
+                        showError();
+                    }
+                }).catch(error => {
+                    showError();
+                });
+            }
+        }
+
+        async function downloadZippedFiles(event, type) {
+            event.preventDefault();
+            const btnId = 'download-' + type + '-btn';
+            const progressId = type + '-progress';
+            const btn = document.getElementById(btnId);
+            const progressSpan = document.getElementById(progressId);
+            
+            if (btn.classList.contains('disabled')) return;
+            btn.classList.add('disabled');
+            
+            try {
+                // Fetch the list of files and their SAS URLs
+                const urlEndpoint = type === 'sog' ? "{% url 'sog_urls' spj.id %}" : "{% url 'lod_urls' spj.id %}";
+                progressSpan.innerText = "(Fetching file list...)";
+                
+                const response = await fetch(urlEndpoint);
+                if (!response.ok) throw new Error('Failed to fetch file URLs');
+                
+                const filesData = await response.json();
+                const filenames = Object.keys(filesData);
+                
+                if (filenames.length === 0) {
+                    throw new Error('No files found for this format');
+                }
+
+                // Create a new ZIP archive
+                const zip = new JSZip();
+                
+                let completedCount = 0;
+                const totalFiles = filenames.length;
+                
+                progressSpan.innerText = `(Downloading 0 / ${totalFiles} files...)`;
+
+                // Fetch all files in parallel (up to a concurrency limit)
+                const concurrencyLimit = 5;
+                let activePromises = [];
+                let currentIndex = 0;
+                
+                while (currentIndex < totalFiles || activePromises.length > 0) {
+                    while (activePromises.length < concurrencyLimit && currentIndex < totalFiles) {
+                        const filename = filenames[currentIndex];
+                        const url = filesData[filename].url;
+                        currentIndex++;
+                        
+                        const fetchPromise = fetch(url)
+                            .then(res => res.arrayBuffer())
+                            .then(data => {
+                                zip.file(filename, data);
+                                completedCount++;
+                                progressSpan.innerText = `(Downloading ${completedCount} / ${totalFiles} files...)`;
+                            });
+                            
+                        activePromises.push(fetchPromise);
+                        
+                        fetchPromise.finally(() => {
+                            activePromises = activePromises.filter(p => p !== fetchPromise);
+                        });
+                    }
+                    
+                    if (activePromises.length > 0) {
+                        await Promise.race(activePromises);
+                    }
+                }
+                
+                progressSpan.innerText = "(Zipping files, please wait...)";
+                
+                // Generate safe zip filename from job title
+                const cleanTitle = "{{ spj.title|escapejs }}".replace(/[^a-zA-Z0-9_\-\. ]/g, '').replace(/ /g, '_');
+                const fileExt = type === 'sog' ? '.sog' : '.zip';
+                const zipFilename = `${cleanTitle}_${type.toUpperCase()}${fileExt}`;
+                
+                const zipBlob = await zip.generateAsync({ type: "blob" });
+                saveAs(zipBlob, zipFilename);
+                
+                progressSpan.innerText = "(Download complete)";
+                setTimeout(() => { progressSpan.innerText = ''; btn.classList.remove('disabled'); }, 3000);
+            } catch (err) {
+                console.error('Error downloading zipped files:', err);
+                progressSpan.innerText = "(Download failed. Try again.)";
+                btn.classList.remove('disabled');
+            }
+        }
+        
+        function downloadZippedSog(event) {
+            downloadZippedFiles(event, 'sog');
+        }
+        
+        function downloadZippedLod(event) {
+            downloadZippedFiles(event, 'lod');
+        }
+
+        {% if user_subscription_tier == "enterprise_perscene" %}
+        // Refund functionality (only for Enterprise Per-Scene users)
+        function requestImmediateRefund() {
+            const button = document.getElementById('refund-btn');
+            const message = document.getElementById('refund-message');
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Processing...';
+            
+            fetch("{% url 'request_refund' spj.id %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'reason=FAILURE&notes=Job failed to complete'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.auto_approved) {
+                        message.innerHTML = '<div class="alert alert-success py-2 mt-2">✓ Credit refunded immediately!</div>';
+                        button.style.display = 'none';
+                    }
+                } else {
+                    message.innerHTML = `<div class="alert alert-danger py-2 mt-2">Error: ${data.error}</div>`;
+                    button.disabled = false;
+                    button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Get Immediate Refund';
+                }
+            })
+            .catch(error => {
+                message.innerHTML = '<div class="alert alert-danger py-2 mt-2">Network error. Please try again.</div>';
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Get Immediate Refund';
+            });
+        }
+
+        function toggleQualityRefundForm() {
+            const form = document.getElementById('quality-refund-form');
+            const button = document.getElementById('show-refund-form-btn');
+            
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                button.style.display = 'none';
+            } else {
+                form.style.display = 'none';
+                button.style.display = 'inline-block';
+                // Clear any previous messages
+                document.getElementById('refund-message').innerHTML = '';
+            }
+        }
+
+        function submitQualityRefund() {
+            const notes = document.getElementById('refund-notes').value;
+            const button = document.getElementById('submit-refund-btn');
+            const message = document.getElementById('refund-message');
+            
+            if (!notes.trim()) {
+                message.innerHTML = '<div class="alert alert-warning py-2 mt-2">Please describe the issues with your scene.</div>';
+                return;
+            }
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Submitting...';
+            
+            fetch("{% url 'request_refund' spj.id %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `reason=UNSATISFIED&notes=${encodeURIComponent(notes)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('quality-refund-form').innerHTML = 
+                        '<div class="alert alert-info py-2">✓ Refund request submitted! We\'ll review within 24 hours and send you an email with our decision.</div>';
+                } else {
+                    message.innerHTML = `<div class="alert alert-danger py-2 mt-2">Error: ${data.error}</div>`;
+                    button.disabled = false;
+                    button.innerHTML = '<i class="bi bi-send"></i> Submit Refund Request';
+                }
+            })
+            .catch(error => {
+                message.innerHTML = '<div class="alert alert-danger py-2 mt-2">Network error. Please try again.</div>';
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-send"></i> Submit Refund Request';
+            });
+        }
+        {% endif %}
+    </script>
+{% endblock %}
+

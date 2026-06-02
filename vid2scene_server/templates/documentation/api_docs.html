@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}vid2scene - API Documentation{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'documentation/css/docs.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="docs" class="container my-4">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 docs-sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">API Documentation</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'api_docs' %}" class="list-group-item list-group-item-action active">
+                        Overview
+                    </a>
+                    <a href="{% url 'getting_started' %}" class="list-group-item list-group-item-action">
+                        Getting Started
+                    </a>
+                    <a href="{% url 'authentication_docs' %}" class="list-group-item list-group-item-action">
+                        Authentication
+                    </a>
+                    <a href="{% url 'endpoints_docs' %}" class="list-group-item list-group-item-action">
+                        API Endpoints
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <h1>vid2scene API Documentation</h1>
+            <p class="lead">Transform your videos into interactive 3D scenes using our powerful API.</p>
+
+            <div class="alert alert-info">
+                <h5 class="alert-heading">🚀 What is vid2scene?</h5>
+                <p>vid2scene converts videos into 3D scenes using advanced computer vision and neural rendering techniques. Upload a video, and we'll generate a 3D Gaussian Splatting scene that you can download or view in our viewer.</p>
+            </div>
+
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">🏢 Enterprise Only</h5>
+                <p class="mb-0">API access is restricted to Enterprise subscribers. Please contact us at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> to inquire.</p>
+            </div>
+
+            <h2>Base URL</h2>
+            <div class="bg-light p-3 rounded">
+                <code>{{ site_url }}/api/v1/</code>
+            </div>
+
+            <h2>Authentication</h2>
+            <p>All API requests require authentication using API keys. The API is available to <strong>Enterprise users only</strong>. Include your API key in the Authorization header:</p>
+            <div class="bg-light p-3 rounded">
+                <code>Authorization: Api-Key YOUR_API_KEY</code>
+            </div>
+
+            <h2>Response Format</h2>
+            <p>All API responses are in JSON format. Successful responses include the requested data, while error responses include error details:</p>
+
+            <h5 class="mt-4">Success Response (List)</h5>
+            <div class="bg-light p-3 rounded mb-4">
+                <pre><code>[
+  {
+    "job_id": "123e4567-e89b-12d3-a456-426614174000",
+    "title": "My video"
+  },
+  {
+    "job_id": "987fcdeb-51a2-43d1-b789-123456789abc",
+    "title": "Another video scene"
+  }
+]</code></pre>
+            </div>
+
+            <h5 class="mt-4">Success Response (Single Object)</h5>
+            <div class="bg-light p-3 rounded mb-4">
+                <pre><code>{
+  "job_id": "123e4567-e89b-12d3-a456-426614174000",
+    "title": "My video",
+    "status": "Finished",
+    ...
+}</code></pre>
+            </div>
+
+            <h5 class="mt-4">Error Response</h5>
+            <div class="bg-light p-3 rounded mb-4">
+                <pre><code>{
+  "error": "Invalid API key"
+}</code></pre>
+            </div>
+
+            <h2>Rate Limits & Access</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>User Type</th>
+                            <th>API Access</th>
+                            <th>Vid2Scene Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Free</td>
+                            <td>❌ No API access</td>
+                            <td>Web interface only</td>
+                        </tr>
+                        <tr>
+                            <td>Pro</td>
+                            <td>❌ No API access</td>
+                            <td>Web interface only</td>
+                        </tr>
+                        <tr>
+                            <td>Enterprise</td>
+                            <td>✅ Full API access</td>
+                            <td>Web interface and API</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>Next Steps</h2>
+            <p>Check out our <a href="{% url 'getting_started' %}">Getting Started guide</a>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'documentation/js/docs.js' %}"></script>
+{% endblock %}

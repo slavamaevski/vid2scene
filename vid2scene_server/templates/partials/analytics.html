@@ -1,0 +1,5 @@
+{% comment %}
+Umami analytics tag. Renders only when UMAMI_WEBSITE_ID is configured, so
+self-hosted instances send no analytics by default.
+{% endcomment %}
+{% if umami_website_id %}<script defer src="{{ umami_src }}" data-website-id="{{ umami_website_id }}" crossorigin="anonymous"></script>{% endif %}

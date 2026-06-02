@@ -1,0 +1,953 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load waffle_tags %}
+{% load static %}
+
+{% block title %}vid2scene - Upload Video{% endblock %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <h1 class="page-header mb-3">Upload a Video to Generate a 3D Scene</h1>
+    <div class="text-muted mb-3">Because video files are usually large, we suggest connecting to WiFi before uploading.</div>
+    <div class="text-muted mb-3">Want to make sure you get great results?<br><a href="{% url 'example_recording' %}">See an example video recording</a> or check the tips below.</div>
+    
+    <!-- Tips Accordion -->
+    <div class="accordion mb-4" id="tipsAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#videoTipsCollapse" aria-expanded="false" aria-controls="videoTipsCollapse">
+                    Tips for Taking a High-Quality Video
+                </button>
+            </h2>
+            <div id="videoTipsCollapse" class="accordion-collapse collapse" data-bs-parent="#tipsAccordion">
+                <div class="accordion-body">
+                    <ul class="mb-0">
+                        <li><strong>Capture from Multiple Angles:</strong> Try to capture all subjects in the scene from multiple angles. Otherwise, the subjects may look incorrect from certain angles or viewpoints.</li>
+                        <li><strong>Use Lateral Movement:</strong> Try to move the camera laterally (left, right, up, down) to capture the scene from different angles. Having only forward or backward movement will cause the scene to look incorrect from certain angles or cause a failed reconstruction.</li>
+                        <li><strong>Keep a Constant Zoom Level:</strong> Don't zoom in or out while taking video, this will break the reconstruction.</li>
+                        <li><strong>Capture only one area:</strong> Try to capture only one area per reconstruction (i.e. one room, one outdoor space, etc.). Too many areas in one reconstruction may cause it to fail.</li>
+                        <li><strong>Ensure Good Lighting:</strong> Make sure the area is well-lit to capture clear visuals.</li>
+                        <li><strong>Keep your Movements Smooth:</strong> Avoid moving the camera too quickly to prevent motion blur. Also, try not to rotate the camera too quickly either -- it may cause certain frames to be missed during the reconstruction process.</li>
+                        <li><strong>What's the ideal length?</strong> The ideal video length is between 1 to 3 minutes.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="uploadForm" action="#" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        {% if user_subscription_tier == "enterprise_perscene" and not user_can_generate_premium_scene_web %}
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Enterprise Per-Scene User:</strong> You currently have 0 API credits remaining. You are defaulted back to free tier limits until credits are replenished. <a href="{% url 'profile' %}">Manage your credits</a>
+        </div>
+        {% endif %}
+        
+        {{ form.video_file|as_crispy_field }}
+        <p class="text-muted" style="margin-top: -0.5rem;">
+            {% if user_can_generate_premium_scene_web %}
+                {% if user_subscription_tier == "enterprise" or user_subscription_tier == "enterprise_perscene" %}
+                <span>Max file size: 1GB <span class="ent-badge ent-gradient">ENT</span></span>
+                {% elif user_subscription_tier == "pro" %}
+                <span>Max file size: 1GB <span class="pro-badge pro-gradient-static">PRO</span></span>
+                {% endif %}
+            {% else %}
+            <span>Max file size: 450MB 
+                {% flag "promote_pro" %}
+                <span class="text-muted">(Up to 1GB with <span class="pro-badge pro-gradient-static">PRO</span>)</span>
+                {% endflag %}
+            </span>
+            {% endif %}
+        </p>
+        
+        {{ form.title|as_crispy_field }}
+
+        {% if user.is_authenticated %}
+            {{ form.public|as_crispy_field }}
+            <p class="text-muted" style="margin-top: -1rem;">This makes the link to your scene publicly accessible to other users.</p>
+        {% else %}
+            <p class="text-muted" style="margin-top: -1rem;">Note: Scenes uploaded without logging in will be publicly accessible using a direct link.<br> <a href="{% url 'account_login' %}">Login</a> to keep track of all of your scenes, create private scenes, and receive email notifications when processing is complete.</p>
+        {% endif %}
+
+        {{ form.allow_as_example|as_crispy_field }}
+        <p class="text-muted" style="margin-top: -1rem;">We'd love to showcase your scene as an inspiring example for other users! By checking this box, you're giving us permission to feature the scene on our <a href="{% url 'example_list' %}">examples page</a> if selected.</p>
+        
+        {% flag "enable_advanced_options" %}
+        <!-- Advanced Options Accordion -->
+        <div class="accordion mb-4" id="advancedAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#advancedOptionsCollapse" aria-expanded="false" aria-controls="advancedOptionsCollapse">
+                        Advanced Options
+                    </button>
+                </h2>
+                <div id="advancedOptionsCollapse" class="accordion-collapse collapse" data-bs-parent="#advancedAccordion">
+                    <div class="accordion-body">
+
+                        {% flag "enable_reconstruction_method_selector" %}
+                        <!-- Reconstruction Method Selector -->
+                        <div class="form-group mb-3">
+                            <label for="id_reconstruction_method">3D Reconstruction Method</label>
+                            {{ form.reconstruction_method }}
+                            <div class="mt-2">
+                                <div class="text-muted small">
+                                    <div class="mb-2">
+                                        <strong>GLOMAP:</strong> Fast reconstruction method that works well for most videos.
+                                    </div>
+                                    <div>
+                                        <strong>VGGT:</strong> AI-based reconstruction that is much faster and works well for short videos (especially AI videos from Veo3, Midjourney, etc.).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endflag %}
+
+                        <!-- Update the gaussians slider section -->
+                        <div class="form-group mb-3">
+                            <label for="id_training_max_num_gaussians_0">Maximum Number of Gaussians</label>
+                            <p class="text-muted" style="margin-top: 0.25rem;">Controls the maximum number of points in your 3D scene. Higher values create more detailed scenes (with diminishing returns) but require more processing time.</p>
+                            <div class="d-flex align-items-center gap-2">
+                                {{ form.training_max_num_gaussians }}
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Min: {{ MIN_NUM_GAUSSIANS|intcomma }}</span>
+                                {% if user_can_generate_premium_scene_web %}
+                                    {% if user_subscription_tier == "enterprise" or user_subscription_tier == "enterprise_perscene" %}
+                                    <span class="text-end">Max: {{ MAX_NUM_GAUSSIANS_PRO|intcomma }} <span class="ent-badge ent-gradient">ENT</span></span>
+                                    {% elif user_subscription_tier == "pro" %}
+                                    <span class="text-end">Max: {{ MAX_NUM_GAUSSIANS_PRO|intcomma }} <span class="pro-badge pro-gradient-static">PRO</span></span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-end">Max: {{ MAX_NUM_GAUSSIANS|intcomma }} 
+                                    {% flag "promote_pro" %}
+                                    <br><span class="text-muted">({{ MAX_NUM_GAUSSIANS_PRO|intcomma }} with <span class="pro-badge pro-gradient-static">PRO</span>)</span>
+                                    {% endflag %}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Update the steps slider section -->
+                        <div class="form-group mb-3">
+                            <label for="id_training_num_steps_0">Number of Training Steps</label>
+                            <p class="text-muted" style="margin-top: 0.25rem;">Controls how long the training process runs. More steps generally improve quality (with diminishing returns) but increase processing time.</p>
+                            <div class="d-flex align-items-center gap-2">
+                                {{ form.training_num_steps }}
+                            </div>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>Min: {{ MIN_NUM_STEPS|intcomma }}</span>
+                                {% if user_can_generate_premium_scene_web %}
+                                    {% if user_subscription_tier == "enterprise" or user_subscription_tier == "enterprise_perscene" %}
+                                    <span class="text-end">Max: {{ MAX_NUM_STEPS_PRO|intcomma }} <span class="ent-badge ent-gradient">ENT</span></span>
+                                    {% elif user_subscription_tier == "pro" %}
+                                    <span class="text-end">Max: {{ MAX_NUM_STEPS_PRO|intcomma }} <span class="pro-badge pro-gradient-static">PRO</span></span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-end">Max: {{ MAX_NUM_STEPS|intcomma }} 
+                                    {% flag "promote_pro" %}
+                                    <br><span class="text-muted">({{ MAX_NUM_STEPS_PRO|intcomma }} with <span class="pro-badge pro-gradient-static">PRO</span>)</span>
+                                    {% endflag %}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+
+                        {{ form.equirectangular|as_crispy_field }}
+                        <p class="text-muted" style="margin-top: -1rem;">(Note: Beta feature) Check this if your video was captured with a 360 degree camera and is in <a href="https://en.wikipedia.org/wiki/360_video_projection" target="_blank">equirectangular</a> format.</p>
+                        
+                        {% flag "enable_remove_background" %}
+                            {{ form.remove_background|as_crispy_field }}
+                            <p class="text-muted" style="margin-top: -1rem;">This removes the background from the video before processing. This is useful if you want to scan a specific object instead of a whole area.</p>
+                        {% endflag %}
+                        
+                        {{ form.use_background_sphere|as_crispy_field }}
+                        <p class="text-muted" style="margin-top: -1rem;">Generates a sphere of points around your scene that's used during the gaussian splatting training process. It can help remove floaters and make the background look more detailed, especially for outdoor scenes.</p>
+                        
+                        <!-- AprilTag Scale Calibration (Enterprise Only) -->
+                        <div class="form-group mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="enable_apriltag_checkbox" 
+                                    {% if user_subscription_tier != "enterprise" and user_subscription_tier != "enterprise_perscene" %}disabled{% endif %}>
+                                <label class="form-check-label" for="enable_apriltag_checkbox" 
+                                    {% if user_subscription_tier != "enterprise" and user_subscription_tier != "enterprise_perscene" %}style="opacity: 0.6;"{% endif %}>
+                                    Enable AprilTag Scale Calibration
+                                </label>
+                            </div>
+                            <p class="text-muted" style="margin-top: 0.5rem;">
+                                <span class="ent-badge ent-gradient">ENT</span> 
+                                Automatically make your scene match real-world scale using AprilTags. 
+                                For best accuracy, place 1 to 4 unique tags in the scene so they are visible throughout your video. Tag family tagStandard41h12 is supported.
+                                <a href="https://april.eecs.umich.edu/software/apriltag" target="_blank">Learn more about AprilTags</a>
+                            </p>
+                            
+                            {% if user_subscription_tier != "enterprise" and user_subscription_tier != "enterprise_perscene" %}
+                            <p class="text-muted small" style="margin-top: 0.25rem;">
+                                <a href="{% url 'subscribe' %}" class="text-decoration-none">
+                                    <strong>Upgrade to Enterprise</strong> to unlock AprilTag scale calibration →
+                                </a>
+                            </p>
+                            {% endif %}
+                            
+                            <!-- AprilTag Size Input (shown when checkbox is enabled) -->
+                            <div id="apriltagSizeContainer" style="display: none;" class="ms-4">
+                                <label for="id_apriltag_size_mm">AprilTag Size (mm)</label>
+                                {{ form.apriltag_size_mm }}
+                                <p class="text-muted small mt-1">
+                                    Tag size is defined as the size of the inner white square of the tag.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        {% flag "enable_pilgram_filters" %}
+                        <!-- Instagram-style Filter Selector -->
+                        <div class="form-group mb-3">
+                            <label for="id_pilgram_filter">Reality Filter</label>
+                            <input type="hidden" name="pilgram_filter" id="id_pilgram_filter">
+                            <div class="filter-dropdown-container">
+                                <button type="button" class="btn btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center" id="filterDropdownBtn">
+                                    <span id="selectedFilterText">None</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <div class="filter-dropdown-menu" id="filterDropdownMenu" style="display: none;">
+                                    <div class="filter-grid">
+                                        <div class="filter-item" data-value="">
+                                            <div class="filter-preview">
+                                                <img src="{% static 'images/filter_previews/original.jpg' %}" alt="No filter">
+                                            </div>
+                                            <div class="filter-name">None</div>
+                                        </div>
+                                        
+                                        {% for value, label in PILGRAM_FILTER_CHOICES %}
+                                            {% if value %}
+                                            <div class="filter-item" data-value="{{ value }}">
+                                                <div class="filter-preview">
+                                                    <img src="{% static 'images/filter_previews/'|add:value|add:'.jpg' %}" alt="{{ label }}">
+                                                </div>
+                                                <div class="filter-name">{{ label }}</div>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-muted" style="margin-top: 0.25rem;">Apply a filter to all frames before processing. This can give your scene a unique look.</p>
+                        </div>
+                        {% endflag %}
+                        
+                        <p class="text-muted fst-italic mt-3">More coming soon!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endflag %}
+
+        {% flag "promote_pro" %}
+        <p class="text-muted mb-1">Queue priority: {% if user_subscription_tier == "enterprise" %}Enterprise <span class="ent-badge ent-gradient">ENT</span>{% elif user_subscription_tier == "enterprise_perscene" and user_can_generate_premium_scene_web %}Enterprise <span class="ent-badge ent-gradient">ENT</span>{% elif user_subscription_tier == "enterprise_perscene" %}Default <span class="ent-badge ent-gradient">ENT</span>{% elif user_subscription_tier == "pro" %}High <span class="pro-badge pro-gradient-static">PRO</span>{% else %}Default <span class="text-muted">(Upgrade to pro for high priority processing)</span>{% endif %}</p>
+        {% endflag %}
+        <p class="text-muted">Estimated processing time: 1.5 to 3 hours</p>
+        <button class="btn btn-primary" type="submit" id="uploadButton">
+            {% if user_subscription_tier == "enterprise_perscene" and user_can_generate_premium_scene_web %}
+                Upload - Costs 1 credit
+            {% else %}
+                Upload
+            {% endif %}
+        </button>
+    </form>
+
+    <br>
+    <!-- Progress Bar -->
+    <div id="uploadProgressContainer" style="display: none;">
+        <div class="progress" style="height: 25px;">
+            <div id="uploadProgressBar" class="progress-bar-striped progress-bar-animated bg-info" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="alert alert-danger" role="alert" style="display: none;"></div>
+
+    <!-- Add Pro upgrade card for free users only -->
+    {% if user_subscription_tier == "free" %}
+    {% flag "promote_pro" %}
+    <div class="card bg-light mb-4">
+        <div class="card-body">
+            <div>
+                <h5 class="card-title mb-2">Ready for Professional Quality?</h5>
+                <p class="card-text mb-3">Upgrade to <strong>Pro</strong> for higher limits, priority processing, and more features. Or choose <strong>Enterprise</strong> for API access, white-labeling, AprilTag calibration, and dedicated support.</p>
+                <div>
+                    <a href="{% url 'subscribe' %}" class="btn pro-gradient-dynamic text-white rounded">
+                        View Plans & Pricing
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endflag %}
+    {% endif %}
+    <style>
+        /* Styles for the custom filter dropdown */
+        .filter-dropdown-container {
+            position: relative;
+        }
+        
+        .filter-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            max-height: 350px;
+            overflow-y: auto;
+            background-color: #fff;
+            border: 1px solid rgba(0,0,0,.15);
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            margin-top: 0.125rem;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.175);
+            width: 100%;
+            max-width: 800px; /* Allow wider on larger screens */
+        }
+        
+        .filter-grid {
+            display: grid;
+            /* Fixed 3 columns on small screens */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        /* Use auto-fit for screens that can accommodate more columns */
+        @media (min-width: 480px) {
+            .filter-grid {
+                grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            }
+        }
+        
+        .filter-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            padding: 5px;
+            text-align: center;
+        }
+        
+        .filter-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .filter-item.selected {
+            background-color: #e9ecef;
+            border: 2px solid #0d6efd;
+        }
+        
+        .filter-preview {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .filter-preview img {
+            width: 100%;
+            height: auto;
+            max-width: 128px; /* Cap image size */
+            max-height: 128px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .filter-name {
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+
+    <script type="module">
+        import { BlockBlobClient } from 'https://cdn.jsdelivr.net/npm/@azure/storage-blob@12.31.0/+esm';
+
+        // AprilTag checkbox toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const apriltagCheckbox = document.getElementById('enable_apriltag_checkbox');
+            const apriltagSizeContainer = document.getElementById('apriltagSizeContainer');
+            const apriltagSizeInput = document.getElementById('id_apriltag_size_mm');
+            
+            if (apriltagCheckbox && apriltagSizeContainer) {
+                // Show/hide size input when checkbox changes
+                apriltagCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        apriltagSizeContainer.style.display = 'block';
+                        apriltagSizeInput.required = true;
+                    } else {
+                        apriltagSizeContainer.style.display = 'none';
+                        apriltagSizeInput.required = false;
+                        apriltagSizeInput.value = '';  // Clear value when disabled
+                    }
+                });
+                
+                // Set initial state on page load
+                if (apriltagCheckbox.checked) {
+                    apriltagSizeContainer.style.display = 'block';
+                    apriltagSizeInput.required = true;
+                }
+                
+                // Validate apriltag size input on blur (reset invalid values)
+                if (apriltagSizeInput) {
+                    apriltagSizeInput.onblur = function() {
+                        const value = parseFloat(this.value);
+                        const min = parseFloat(this.min);
+                        const max = parseFloat(this.max);
+                        
+                        // If invalid input, clear it
+                        if (isNaN(value)) {
+                            this.value = '';
+                        }
+                        // Ensure value is within range
+                        else if (value < min) {
+                            this.value = min;
+                        }
+                        else if (value > max) {
+                            this.value = max;
+                        }
+                    };
+                }
+            }
+        });
+        
+        // Filter dropdown functionality (only present when the
+        // enable_pilgram_filters waffle flag is active; bail out cleanly otherwise)
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterDropdownBtn = document.getElementById('filterDropdownBtn');
+            if (!filterDropdownBtn) return;
+            const filterDropdownMenu = document.getElementById('filterDropdownMenu');
+            const filterInput = document.getElementById('id_pilgram_filter');
+            const selectedFilterText = document.getElementById('selectedFilterText');
+            const filterItems = document.querySelectorAll('.filter-item');
+
+            // Toggle dropdown
+            filterDropdownBtn.addEventListener('click', function() {
+                filterDropdownMenu.style.display = filterDropdownMenu.style.display === 'none' ? 'block' : 'none';
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!filterDropdownBtn.contains(event.target) && !filterDropdownMenu.contains(event.target)) {
+                    filterDropdownMenu.style.display = 'none';
+                }
+            });
+            
+            // Handle filter selection
+            filterItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    const name = this.querySelector('.filter-name').textContent;
+                    
+                    // Update hidden input
+                    filterInput.value = value;
+                    
+                    // Update button text
+                    selectedFilterText.textContent = name;
+                    
+                    // Update selected state
+                    filterItems.forEach(i => i.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    // Close dropdown
+                    filterDropdownMenu.style.display = 'none';
+                });
+            });
+        });
+        
+        let uploadPromise = null;
+        let blobName = null;
+        let uploadInProgress = false;
+        let totalFileSize = 0;
+        let uploadedAtStart = 0;
+        let currentUploadedBytes = 0;
+        let showingProgress = false;
+        let currentFileHash = null;
+        let activeAbortController = null;
+
+        // Function to warn user before leaving page during upload
+        function beforeUnloadHandler(e) {
+            if (uploadInProgress) {
+                e.preventDefault();
+                e.returnValue = ''; // Required for Chrome
+                return ''; // Required for some older browsers
+            }
+        }
+
+        // Function to generate a simple hash for a file
+        async function generateFileHash(file) {
+            // Use file properties to create a unique identifier
+            return `${file.name}-${file.size}-${file.lastModified}`;
+        }
+
+        // Function to cancel any ongoing upload
+        function cancelCurrentUpload() {
+            if (activeAbortController) {
+                try {
+                    activeAbortController.abort();
+                } catch(e) {
+                    console.error("Error aborting previous upload:", e);
+                }
+                activeAbortController = null;
+            }
+            // Remove beforeunload handler when canceling
+            window.removeEventListener('beforeunload', beforeUnloadHandler);
+            uploadPromise = null;
+            blobName = null;
+            uploadInProgress = false;
+            currentUploadedBytes = 0;
+            showingProgress = false;
+        }
+
+        // Start uploading as soon as a file is selected
+        document.getElementById('id_video_file').addEventListener('change', async function() {
+            var file = this.files[0];
+            if (!file) return;
+
+            // Cancel any existing upload
+            cancelCurrentUpload();
+
+            // Hide any previous error messages
+            document.getElementById('errorMessage').style.display = 'none';
+
+            // Set new file information
+            totalFileSize = file.size;
+            currentUploadedBytes = 0;
+            currentFileHash = await generateFileHash(file);
+
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const validExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+            
+            try {
+                if (file.size > {{ max_video_file_size }}) {
+                    throw new Error('File size is too large. Please try again with a smaller file.');
+                }
+
+                if (!validExtensions.includes(fileExtension)) {
+                    throw new Error('Invalid file type. Please upload a .mp4, .mov, .avi, .mkv, or .webm file.');
+                }
+
+                // Get SAS URL
+                var sasResponse = await fetch("{% url 'web_api_generate_upload_sas' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: JSON.stringify({
+                        'file_extension': fileExtension
+                    })
+                });
+
+                if (!sasResponse.ok) {
+                    throw new Error('Failed to get URL.');
+                }
+
+                var sasData = await sasResponse.json();
+                var sasUrl = sasData.sas_url;
+                blobName = sasData.blob_name;
+
+                // Start upload in background
+                uploadInProgress = true;
+                // Add beforeunload handler to warn user about leaving page
+                window.addEventListener('beforeunload', beforeUnloadHandler);
+                
+                // Store the file hash we're uploading
+                const fileHashForThisUpload = currentFileHash;
+                
+                // Create a promise that resolves when the upload is complete
+                activeAbortController = new AbortController();
+                // Size chunks so even small files produce many progress updates.
+                // Target ~50 chunks, clamped to [64KB, 32MB] so tiny files still tick.
+                const targetChunks = 50;
+                const minBlockSize = 64 * 1024;
+                const maxBlockSize = 32 * 1024 * 1024;
+                const blockSize = Math.min(
+                    maxBlockSize,
+                    Math.max(minBlockSize, Math.ceil(file.size / targetChunks))
+                );
+                uploadPromise = (async () => {
+                    try {
+                        const blockBlobClient = new BlockBlobClient(sasUrl);
+                        await blockBlobClient.uploadBrowserData(file, {
+                            blockSize: blockSize,
+                            maxSingleShotSize: blockSize, // force chunked upload so progress ticks per block
+                            concurrency: 4, // parallel chunk uploads
+                            abortSignal: activeAbortController.signal,
+                            onProgress: (ev) => {
+                                if (fileHashForThisUpload === currentFileHash) {
+                                    currentUploadedBytes = ev.loadedBytes;
+                                    if (showingProgress) {
+                                        updateVisibleProgress();
+                                    }
+                                }
+                            }
+                        });
+                        
+                        if (fileHashForThisUpload === currentFileHash) {
+                            uploadInProgress = false;
+                            window.removeEventListener('beforeunload', beforeUnloadHandler);
+                            currentUploadedBytes = totalFileSize;
+                            if (showingProgress) {
+                                updateVisibleProgress();
+                            }
+                            activeAbortController = null;
+                        }
+                    } catch (error) {
+                        if (fileHashForThisUpload === currentFileHash) {
+                            uploadInProgress = false;
+                            window.removeEventListener('beforeunload', beforeUnloadHandler);
+                            activeAbortController = null;
+                            if (error && error.name === 'AbortError') {
+                                console.log("Upload aborted");
+                                return; // Don't throw if just aborted
+                            }
+                            throw new Error('Failed to upload');
+                        }
+                    }
+                })();
+
+            } catch (error) {
+                const errorMessage = document.getElementById('errorMessage');
+                let userMessage = 'An error occurred while processing your video file. Please try again.';
+
+                if (error?.message) {
+                    if (error.message.includes('File size is too large')) {
+                        userMessage = 'The file size is too large. Please try again with a smaller file.';
+                    } else if (error.message.includes('Invalid file type')) {
+                        userMessage = 'The file type is invalid. Please upload a .mp4, .mov, .avi, .mkv, or .webm file.';
+                    } else if (error.message.includes('Failed to get URL')) {
+                        userMessage = "You've reached the maximum allowed requests for this period. Please wait a while before trying again.";
+                    }
+                }
+
+                errorMessage.textContent = userMessage;
+                errorMessage.style.display = 'block';
+                uploadPromise = null;
+                blobName = null;
+            }
+        });
+
+        // Function to update visible progress based on current state
+        function updateVisibleProgress() {
+            const progressBar = document.getElementById('uploadProgressBar');
+            
+            // Calculate adjusted percentage based on what was already uploaded when progress bar was shown
+            let remainingBytes = totalFileSize - uploadedAtStart;
+            let bytesSinceStart = currentUploadedBytes - uploadedAtStart;
+            let percentComplete; // Declare the variable before using it
+            
+            // Prevent division by zero
+            if (remainingBytes <= 0) {
+                percentComplete = 100;
+            } else {
+                // Scale the remaining upload to 0-100%
+                percentComplete = Math.round((bytesSinceStart / remainingBytes) * 100);
+                // Cap at 100%
+                percentComplete = Math.min(percentComplete, 100);
+            }
+            
+            progressBar.style.width = percentComplete + '%';
+            progressBar.setAttribute('aria-valuenow', percentComplete);
+            progressBar.textContent = percentComplete + '%';
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            // Disable the form elements but keep accordion buttons enabled
+            const form = document.getElementById('uploadForm');
+            const formElements = form.elements;
+            for (let i = 0; i < formElements.length; i++) {
+                formElements[i].disabled = true;
+            }
+            
+            // Re-enable accordion buttons so they can still be expanded/collapsed
+            const accordionButtons = document.querySelectorAll('.accordion-button');
+            accordionButtons.forEach(button => {
+                button.disabled = false;
+            });
+
+            // Get form data
+            var title = document.getElementById('id_title').value;
+            var isPublic = document.getElementById('id_public') ? document.getElementById('id_public').checked : false;
+            var allowAsExample = document.getElementById('id_allow_as_example') ? document.getElementById('id_allow_as_example').checked : false;
+            var removeBackground = document.getElementById('id_remove_background') ? document.getElementById('id_remove_background').checked : false;
+            var equirectangular = document.getElementById('id_equirectangular') ? document.getElementById('id_equirectangular').checked : false;
+            var useBackgroundSphere = document.getElementById('id_use_background_sphere') ? document.getElementById('id_use_background_sphere').checked : false;
+            var reconstructionMethod = document.getElementById('id_reconstruction_method') ? document.getElementById('id_reconstruction_method').value : 'glomap';
+
+            // Properly handle the pilgram filter - convert empty string to null
+            var pilgramFilterElement = document.getElementById('id_pilgram_filter');
+            var pilgramFilter = pilgramFilterElement && pilgramFilterElement.value !== "" ? pilgramFilterElement.value : null;
+
+            // Prefer the slider widget (index 1) but fall back to the number input
+            // (index 0) when only one widget is rendered (e.g. simplified form).
+            var gaussiansWidgetEls = document.querySelectorAll('[id^="id_training_max_num_gaussians"]');
+            var maxGaussians = (gaussiansWidgetEls[1] || gaussiansWidgetEls[0])?.value;
+            var stepsWidgetEls = document.querySelectorAll('[id^="id_training_num_steps"]');
+            var numSteps = (stepsWidgetEls[1] || stepsWidgetEls[0])?.value;
+            
+            // AprilTag calibration parameters
+            var enableApriltagCheckbox = document.getElementById('enable_apriltag_checkbox');
+            var enableApriltag = enableApriltagCheckbox ? enableApriltagCheckbox.checked : false;
+            var apriltagSizeElement = document.getElementById('id_apriltag_size_mm');
+            var apriltagSize = (enableApriltag && apriltagSizeElement && apriltagSizeElement.value) ? parseFloat(apriltagSizeElement.value) : null;
+
+            // Check if upload is already complete before showing progress
+            // More robust check: ensure upload isn't in progress, we have a blob name,
+            // we've uploaded 100% of the current file, and it matches the current file
+            const videoFileInput = document.getElementById('id_video_file');
+            const currentFile = videoFileInput.files[0];
+            const currentFileSize = currentFile ? currentFile.size : 0;
+            
+            const isUploadComplete = !uploadInProgress && 
+                                   blobName && 
+                                   currentUploadedBytes === totalFileSize && 
+                                   totalFileSize === currentFileSize &&
+                                   totalFileSize > 0;
+
+            // Now show the progress UI
+            var progressContainer = document.getElementById('uploadProgressContainer');
+            progressContainer.style.display = 'block';
+            
+            // Set the starting point for our progress tracking
+            uploadedAtStart = currentUploadedBytes;
+            showingProgress = true;
+            
+            // Reset progress bar to 0%
+            const progressBar = document.getElementById('uploadProgressBar');
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', 0);
+            progressBar.textContent = '0%';
+
+            try {
+                // Verify we have a file and an upload in progress or completed
+                if (!uploadPromise && !blobName) {
+                    var file = videoFileInput.files[0];
+                    if (!file) {
+                        throw new Error('Please select a video file to upload.');
+                    }
+                    // This shouldn't happen since we now start upload on file selection
+                    throw new Error('Upload not started. Please try again.');
+                }
+
+                // If upload is already complete, show a smooth progress animation
+                if (isUploadComplete) {
+                    await new Promise((resolve) => {
+                        let progress = 0;
+                        const duration = 1000; // 1 second
+                        const steps = 20; // Number of animation steps
+                        const stepDuration = duration / steps;
+                        const stepSize = 100 / steps;
+                        
+                        const animateProgress = () => {
+                            progress += stepSize;
+                            if (progress >= 100) {
+                                progress = 100;
+                                progressBar.style.width = '100%';
+                                progressBar.setAttribute('aria-valuenow', 100);
+                                progressBar.textContent = '100%';
+                                resolve();
+                            } else {
+                                progressBar.style.width = Math.round(progress) + '%';
+                                progressBar.setAttribute('aria-valuenow', Math.round(progress));
+                                progressBar.textContent = Math.round(progress) + '%';
+                                setTimeout(animateProgress, stepDuration);
+                            }
+                        };
+                        
+                        animateProgress();
+                    });
+                }
+                // If upload is still in progress, wait for it to complete
+                else if (uploadInProgress) {
+                    await uploadPromise;
+                } else {
+                    throw new Error('Upload interrupted. Please check your network connection, refresh, and select your file again.');
+                }
+
+                // Step 3: Notify the server about the uploaded video
+                var notifyResponse = await fetch("{% url 'web_api_submit_video' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        public: isPublic,
+                        blob_name: blobName,
+                        allow_as_example: allowAsExample,
+                        remove_background: removeBackground,
+                        equirectangular: equirectangular,
+                        use_background_sphere: useBackgroundSphere,
+                        reconstruction_method: reconstructionMethod,
+                        training_max_num_gaussians: maxGaussians,
+                        training_num_steps: numSteps,
+                        pilgram_filter: pilgramFilter,
+                        apriltag_size_mm: apriltagSize
+                    })
+                });
+
+                if (!notifyResponse.ok) {
+                    throw new Error('Failed to register the uploaded video.');
+                }
+
+                var notifyData = await notifyResponse.json();
+                if (notifyData.success) {
+                    window.location.href = notifyData.redirect_url;
+                } else {
+                    throw new Error(notifyData.error_message || 'Unknown error.');
+                }
+
+            } catch (error) {
+                let userMessage = 'An error occurred while uploading your video. Please try again.';
+
+                if (error?.message) {
+                    if (error.message.includes('Please select')) {
+                        userMessage = 'Please select a video file or .zip file to upload.';
+                    } else if (error.message.includes('Failed to register')) {
+                        userMessage = 'Your file was uploaded but could not be processed. Please try again or contact support.';
+                    } else if (error.message.includes('Upload not started')) {
+                        userMessage = 'Upload not started. Please try selecting your file again.';
+                    } else if (error.message.includes('Upload interrupted')) {
+                        userMessage = error.message;
+                    }
+                }
+
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = userMessage;
+                errorMessage.style.display = 'block';
+                progressContainer.style.display = 'none';
+                showingProgress = false;
+                
+                // Re-enable the form on error
+                for (let i = 0; i < formElements.length; i++) {
+                    formElements[i].disabled = false;
+                }
+            } finally {
+                // We don't re-enable the form here since we either:
+                // 1. Navigate away on success (window.location.href)
+                // 2. Re-enable in the catch block on error
+            }
+        });
+
+        // Update the displayed values when sliders change
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle the Gaussians slider and input
+            const gaussiansWidgets = document.querySelectorAll('[id^="id_training_max_num_gaussians"]');
+            if (gaussiansWidgets.length >= 2) {
+                const gaussiansInput = gaussiansWidgets[0];  // First widget is number input
+                const gaussiansSlider = gaussiansWidgets[1]; // Second widget is range slider
+                
+                // Store default values
+                const gaussiansDefaultValue = {{ DEFAULT_NUM_GAUSSIANS }};
+                
+                // Add appropriate styling
+                gaussiansInput.style.width = "100px";
+                gaussiansSlider.style.flexGrow = "1";
+                
+                // Update input when slider changes
+                gaussiansSlider.oninput = function() {
+                    gaussiansInput.value = this.value;
+                };
+                
+                // Validate and enforce range on blur
+                gaussiansInput.onblur = function() {
+                    const min = parseInt(gaussiansSlider.min);
+                    const max = parseInt(gaussiansSlider.max);
+                    let value = parseInt(this.value);
+                    
+                    // If invalid input, reset to default
+                    if (isNaN(value)) {
+                        value = gaussiansDefaultValue;
+                        this.value = value;
+                    }
+                    // Ensure value is within range
+                    else if (value < min) {
+                        value = min;
+                        this.value = min;
+                    }
+                    else if (value > max) {
+                        value = max;
+                        this.value = max;
+                    }
+                    
+                    // Update slider value
+                    gaussiansSlider.value = value;
+                };
+                
+                // Update slider in real-time for valid values
+                gaussiansInput.oninput = function() {
+                    const value = parseInt(this.value);
+                    const min = parseInt(gaussiansSlider.min);
+                    const max = parseInt(gaussiansSlider.max);
+                    
+                    // If we have a valid number and it's in range, update the slider
+                    if (!isNaN(value) && value >= min && value <= max) {
+                        gaussiansSlider.value = value;
+                    }
+                };
+            }
+            
+            // Handle the Steps slider and input (same pattern)
+            const stepsWidgets = document.querySelectorAll('[id^="id_training_num_steps"]');
+            if (stepsWidgets.length >= 2) {
+                const stepsInput = stepsWidgets[0];
+                const stepsSlider = stepsWidgets[1];
+                
+                // Store default values
+                const stepsDefaultValue = {{ DEFAULT_NUM_STEPS }};
+                
+                // Add appropriate styling
+                stepsInput.style.width = "100px";
+                stepsSlider.style.flexGrow = "1";
+                
+                stepsSlider.oninput = function() {
+                    stepsInput.value = this.value;
+                };
+                
+                // Validate on blur
+                stepsInput.onblur = function() {
+                    const min = parseInt(stepsSlider.min);
+                    const max = parseInt(stepsSlider.max);
+                    let value = parseInt(this.value);
+                    
+                    // If invalid input, reset to default
+                    if (isNaN(value)) {
+                        value = stepsDefaultValue;
+                        this.value = value;
+                    }
+                    // Ensure value is within range
+                    else if (value < min) {
+                        value = min;
+                        this.value = min;
+                    }
+                    else if (value > max) {
+                        value = max;
+                        this.value = max;
+                    }
+                    
+                    // Update slider value
+                    stepsSlider.value = value;
+                };
+                
+                // Update slider in real-time for valid values
+                stepsInput.oninput = function() {
+                    const value = parseInt(this.value);
+                    const min = parseInt(stepsSlider.min);
+                    const max = parseInt(stepsSlider.max);
+                    
+                    // If we have a valid number and it's in range, update the slider
+                    if (!isNaN(value) && value >= min && value <= max) {
+                        stepsSlider.value = value;
+                    }
+                };
+            }
+        });
+    </script>
+{% endblock %}

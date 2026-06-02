@@ -1,0 +1,49 @@
+vid2scene
+Copyright 2026 Samuel McFadden / SamuSynth
+
+This product includes software developed at SamuSynth.
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+================================================================================
+Third-party software vendored in this repository
+================================================================================
+
+Eigen (vid2scene_core/autolod_cpp/include/Eigen/)
+  https://eigen.tuxfamily.org/
+  Mozilla Public License v2.0 (and BSD for some modules).
+
+================================================================================
+Third-party software included as git submodules
+================================================================================
+
+This project pulls the following projects as git submodules at clone time.
+Each is distributed under its own license; see the corresponding repository
+for the full license text.
+
+glomap                      https://github.com/colmap/glomap
+Hierarchical-Localization   https://github.com/cvg/Hierarchical-Localization
+spz                         https://github.com/nianticlabs/spz
+sam3                        https://github.com/facebookresearch/sam3
+gsplat (fork)               https://github.com/samusynth/gsplat
+                            upstream: https://github.com/nerfstudio-project/gsplat
+vggt (fork)                 https://github.com/samusynthorg/vggt
+                            upstream: https://github.com/facebookresearch/vggt
+ply-to-sog                  https://github.com/samuelm2/ply-to-sog
+3dgs-autolod                https://github.com/samuelm2/3dgs-autolod
+quest-3d-reconstruction     https://github.com/samuelm2/quest-3d-reconstruction
+svraster-webgl              https://github.com/samuelm2/svraster-webgl
+simpleomp                   https://github.com/MuTsunTsai/simpleomp
+
+================================================================================
+Third-party runtime dependencies
+================================================================================
+
+Server (Python) dependencies are listed in vid2scene_server/requirements.txt
+and are installed at build time from PyPI. Each carries its own license.
+
+Worker (Python) dependencies are listed in requirements_worker.txt,
+vid2scene_server/requirements.txt, and the conda environment file
+env_cuda_colmap.yml.
+
+Frontend (npm) dependencies are listed in vid2scene_server/viewer/package.json.
+Built artifacts are produced by Vite at image-build time.

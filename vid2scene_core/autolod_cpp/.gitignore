@@ -1,0 +1,14 @@
+# Build directories
+build/
+build-wasm/
+
+# Generated WASM files in test directory (copied from build)
+test/*.js
+test/*.wasm
+test/*.worker.js
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}API Reference{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div id="swagger-ui"></div>
+</div>
+{% endblock %}
+{% block extra_scripts_head %}
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+{% endblock %}
+{% block extra_scripts %}
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    SwaggerUIBundle({
+      url: '/openapi.yaml',
+      dom_id: '#swagger-ui',
+      presets: [SwaggerUIBundle.presets.apis],
+      layout: 'BaseLayout'
+    });
+  });
+ </script>
+{% endblock %}
+
+

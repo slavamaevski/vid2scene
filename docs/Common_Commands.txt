@@ -1,0 +1,8 @@
+# Connect to worker container
+docker exec -it $(docker ps -aqf "name=vid2scene-worker") "/bin/bash"
+
+# Convert Personal Access Token to base64 for rotating PAT for npm authentication (Powershell):
+    [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("YOUR_PAT"))
+
+# Run azurite test server
+azurite --skipApiVersionCheck -s -l azurite -d azurite/debug.log

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}vid2scene - API Authentication{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'documentation/css/docs.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="docs" class="container my-4">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 docs-sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">API Documentation</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'api_docs' %}" class="list-group-item list-group-item-action">
+                        Overview
+                    </a>
+                    <a href="{% url 'getting_started' %}" class="list-group-item list-group-item-action">
+                        Getting Started
+                    </a>
+                    <a href="{% url 'authentication_docs' %}" class="list-group-item list-group-item-action active">
+                        Authentication
+                    </a>
+                    <a href="{% url 'endpoints_docs' %}" class="list-group-item list-group-item-action">
+                        API Endpoints
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <h1>API Authentication</h1>
+            <p class="lead">Learn how to authenticate with the vid2scene API using API keys.</p>
+
+            <h2>Overview</h2>
+            <p>The vid2scene API uses API key authentication and is available to <strong>Enterprise users only</strong>. Each API key is associated with your user account and provides access to your own jobs.</p>
+
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">🏢 Enterprise Requirement</h5>
+                <p class="mb-0">API access is restricted to Enterprise subscribers. Only Enterprise users can generate API keys and access the API endpoints.</p>
+            </div>
+
+            <div class="alert alert-info">
+                <h5 class="alert-heading">🔐 Security Notice</h5>
+                <p class="mb-0">Keep your API keys secure and never share them publicly. API keys provide full access to your account and should be treated like passwords.</p>
+            </div>
+
+            <h2>Getting an API Key</h2>
+            <ol>
+                <li>
+                    {% if user.is_authenticated %}
+                        Go to your <a href="{% url 'profile' %}" target="_blank">profile page</a>
+                    {% else %}
+                        <a href="{% url 'account_login' %}">Log in</a> and go to your profile page
+                    {% endif %}
+                </li>
+                <li>Scroll to the "API Keys" section</li>
+                <li>Enter a name like "My First API Key"</li>
+                <li>Click "Generate API Key"</li>
+                <li>Copy the key (you'll only see it once!)</li>
+            </ol>
+
+            <div class="alert alert-warning">
+                <strong>Important:</strong> Store your API key securely. Never commit it to version control or share it publicly.
+            </div>
+            <h2>Using API Keys</h2>
+            <p>Include your API key in the <code>Authorization</code> header of every API request:</p>
+
+            <div class="bg-light p-3 rounded mb-3">
+                <code>Authorization: Api-Key YOUR_API_KEY_HERE</code>
+            </div>
+
+            <h3>Example Request</h3>
+            <div class="bg-dark text-light p-3 rounded">
+                 <pre><code>curl -H "Authorization: Api-Key abc123def456..." \
+     -H "Content-Type: application/json" \
+     {{ site_url }}/api/v1/jobs/</code></pre>
+            </div>
+
+            <h2>Authentication Errors</h2>
+            <p>If authentication fails, you'll receive a <code>401 Unauthorized</code> response:</p>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Error</th>
+                            <th>Description</th>
+                            <th>Solution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>401 Unauthorized</code></td>
+                            <td>Missing or invalid API key</td>
+                            <td>Check your API key and Authorization header</td>
+                        </tr>
+                        <tr>
+                            <td><code>403 Forbidden</code></td>
+                            <td>API key doesn't have permission</td>
+                            <td>Ensure your account has the required permissions</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>API Key Management</h2>
+            
+            <h3>Key Properties</h3>
+            <ul>
+                <li><strong>Name</strong>: A descriptive name to help you identify the key</li>
+                <li><strong>Prefix</strong>: A short prefix shown for identification (e.g., "abc123")</li>
+                <li><strong>Created</strong>: When the key was generated</li>
+                <li><strong>Last Used</strong>: When the key was last used for API requests</li>
+            </ul>
+
+            <h3>Revoking Keys</h3>
+            <p>You can revoke API keys at any time from your profile page. Revoked keys will immediately stop working for all API requests.</p>
+
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">⚠️ Important</h5>
+                <p class="mb-0">Revoking an API key cannot be undone. Any applications using that key will lose access immediately.</p>
+            </div>
+
+            <h2>Best Practices</h2>
+            <ul>
+                <li><strong>Use descriptive names</strong>: Name your keys after their purpose (e.g., "Production App", "Testing", "Mobile App")</li>
+                <li><strong>Rotate keys regularly</strong>: Generate new keys and revoke old ones periodically</li>
+                <li><strong>Use environment variables</strong>: Store API keys in environment variables, never in code</li>
+                <li><strong>Monitor usage</strong>: Check the "Last Used" timestamp to identify unused keys</li>
+                <li><strong>Revoke unused keys</strong>: Remove keys that are no longer needed</li>
+            </ul>
+
+            <h2>Code Examples</h2>
+            
+            <h3>Python</h3>
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>import requests
+import os
+
+ API_KEY = os.environ['VID2SCENE_API_KEY']
+headers = {
+    'Authorization': f'Api-Key {API_KEY}',
+    'Content-Type': 'application/json'
+}
+
+ response = requests.get('{{ site_url }}/api/v1/jobs/', headers=headers)
+print(response.json())</code></pre>
+            </div>
+
+            <h3>JavaScript/Node.js</h3>
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>const apiKey = process.env.VID2SCENE_API_KEY;
+
+ fetch('{{ site_url }}/api/v1/jobs/', {
+    headers: {
+        'Authorization': `Api-Key ${apiKey}`,
+        'Content-Type': 'application/json'
+    }
+})
+.then(response => response.json())
+.then(data => console.log(data));</code></pre>
+            </div>
+
+            <h3>PHP</h3>
+            <div class="bg-dark text-light p-3 rounded">
+                <pre><code>$apiKey = getenv('VID2SCENE_API_KEY');
+
+$headers = [
+    'Authorization: Api-Key ' . $apiKey,
+    'Content-Type: application/json'
+];
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, '{{ site_url }}/api/jobs/');
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$data = json_decode($response, true);
+print_r($data);</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'documentation/js/docs.js' %}"></script>
+{% endblock %}
