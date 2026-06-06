@@ -67,7 +67,7 @@ ENV TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
 COPY env_cuda_colmap.yml /app/env_cuda_colmap.yml
 RUN conda env create -f /app/env_cuda_colmap.yml
 RUN echo "conda activate env_cuda_colmap" >> ~/.bashrc
-SHELL ["conda", "run", "-n", "env_cuda_colmap", "/bin/bash", "-c"]
+SHELL ["/opt/conda/bin/conda", "run", "-n", "env_cuda_colmap", "/bin/bash", "-c"]
 
 # Copy project files into the container:
 COPY vid2scene_server /app/vid2scene_server
