@@ -373,7 +373,27 @@ def run_gsplat(gsplat_script, sfm_output_dir, result_dir, save_ply_path, trainin
         "--steps_scaler",
         str(steps_scaler)
     ]
-    
+
+    # --- Quality/stability recipe for drone exteriors (env-tunable; rebuild once, then tune via env) ---
+    # gsplat defaults are bare: scale_reg=0.0, opacity_reg=0.0, sh_degree=2, no pose/app/AA.
+    # That bare config is what produces spiky/needle gaussians. These add the missing brakes + quality.
+    import os as _os
+    _scale_reg = _os.environ.get("GS_SCALE_REG", "0.08")      # was 0.0 -> brake on spiky scale runaway
+    _opacity_reg = _os.environ.get("GS_OPACITY_REG", "0.01")  # was 0.0 -> culls floaters
+    _sh = _os.environ.get("GS_SH_DEGREE", "3")                # was 2  -> view-dependence (Luma uses 3)
+    gsplat_command += ["--scale_reg", _scale_reg, "--opacity_reg", _opacity_reg, "--sh_degree", _sh]
+    if _os.environ.get("GS_POSE_OPT", "1") == "1":
+        gsplat_command.append("--pose_opt")       # refine (drone) camera poses during training
+    if _os.environ.get("GS_APP_OPT", "1") == "1":
+        gsplat_command.append("--app_opt")        # per-image appearance/exposure embedding
+    if _os.environ.get("GS_ANTIALIASED", "1") == "1":
+        gsplat_command.append("--antialiased")    # Mip-style AA; kills spiky-gaussian popping
+    logger.info(
+        f"[recipe] scale_reg={_scale_reg} opacity_reg={_opacity_reg} sh={_sh} "
+        f"pose_opt={_os.environ.get('GS_POSE_OPT','1')} app_opt={_os.environ.get('GS_APP_OPT','1')} "
+        f"antialiased={_os.environ.get('GS_ANTIALIASED','1')}"
+    )
+
     # Add mcmc_refine_every if provided
     if mcmc_refine_every is not None:
         gsplat_command.extend(["--mcmc_refine_every", str(mcmc_refine_every)])
